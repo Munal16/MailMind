@@ -1,0 +1,1 @@
+backend/ml_models/mailmind_intent_distilbert/model.safetensors filter=lfs diff=lfs merge=lfs -text
