@@ -1,0 +1,26 @@
+subject,snippet,urgency,intent
+Urgent meeting tomorrow,Please join the project meeting tomorrow morning,High,Meeting
+Invoice payment due,Your invoice payment is due today,High,Payment
+Need help with account login,I cannot access my account please help,Medium,Support
+Package shipped,Your order has been shipped and will arrive soon,Low,Delivery
+Reminder for weekly sync,Reminder for our weekly sync tomorrow,Medium,Meeting
+Final notice for overdue payment,This is the final notice for your unpaid bill,High,Payment
+System error reported,The application failed and shows an unknown error,High,Support
+Courier out for delivery,Your courier is out for delivery today,Medium,Delivery
+Greetings from the team,We wanted to say thank you for your support,Low,General
+Schedule confirmation,Your appointment has been confirmed,Medium,Meeting
+Bank receipt attached,Please find attached payment receipt,Medium,Payment
+Unable to submit form,I am unable to submit the support request form,Medium,Support
+Delivery completed,Your parcel was delivered successfully,Low,Delivery
+General inquiry,Can you share more information about the product,Low,General
+ASAP action required,Please review the attached report immediately,High,General
+Meeting agenda shared,Please review the agenda before tomorrow meeting,Medium,Meeting
+Payment reminder today,Kindly clear the pending payment by end of day,High,Payment
+Support ticket update,Your reported issue has been escalated to support team,Medium,Support
+Shipping confirmation,Your package is in transit and arriving this week,Low,Delivery
+Friendly follow up,Just checking in regarding our previous conversation,Low,General
+Critical server outage,Production server is down and needs immediate action,High,Support
+Invoice received,We have sent your monthly invoice attachment,Medium,Payment
+Reschedule call request,Can we move our call to next Monday,Medium,Meeting
+Delivered to doorstep,The parcel has been delivered at your address,Low,Delivery
+Product feedback request,Please share your feedback about our service,Low,General
