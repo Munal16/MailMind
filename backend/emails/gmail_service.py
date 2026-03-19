@@ -1,14 +1,19 @@
-﻿from google.oauth2.credentials import Credentials
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from .models import GmailCredential
 
 
+class GmailAuthError(Exception):
+    pass
+
+
 def get_gmail_service(user):
     cred = GmailCredential.objects.filter(user=user).first()
     if not cred or not cred.refresh_token:
-        raise ValueError("Gmail not connected or refresh_token missing.")
+        raise GmailAuthError("Gmail is not connected. Please connect Gmail first.")
 
     creds = Credentials(
         token=cred.access_token,
@@ -19,13 +24,22 @@ def get_gmail_service(user):
         scopes=(cred.scopes.split(",") if cred.scopes else None),
     )
 
-    # Refresh if needed
-    if not creds.valid:
-        if creds.expired and creds.refresh_token:
+    try:
+        if creds.refresh_token:
             creds.refresh(Request())
-            # Save updated access token back to DB
             cred.access_token = creds.token
+            cred.refresh_token = creds.refresh_token or cred.refresh_token
             cred.expiry = creds.expiry
+            if creds.scopes:
+                cred.scopes = ",".join(creds.scopes)
             cred.save()
+        elif not creds.valid:
+            raise GmailAuthError("Gmail authorization expired. Please reconnect Gmail.")
+    except RefreshError as exc:
+        cred.access_token = None
+        cred.refresh_token = None
+        cred.expiry = None
+        cred.save(update_fields=["access_token", "refresh_token", "expiry", "updated_at"])
+        raise GmailAuthError("Your Gmail authorization expired or was revoked. Please reconnect Gmail.") from exc
 
     return build("gmail", "v1", credentials=creds)

@@ -5,12 +5,20 @@ export async function registerUser(payload) {
   return res.data;
 }
 
+export function setAuthTokens(access, refresh) {
+  localStorage.setItem("access_token", access);
+  localStorage.setItem("refresh_token", refresh);
+}
+
 export async function loginUser(payload) {
   const res = await api.post("/api/auth/login/", payload);
-  // Save tokens
-  localStorage.setItem("access_token", res.data.access);
-  localStorage.setItem("refresh_token", res.data.refresh);
+  setAuthTokens(res.data.access, res.data.refresh);
   return res.data;
+}
+
+export async function getGoogleLoginUrl() {
+  const res = await api.get("/api/users/google/login-url/");
+  return res.data.authorization_url;
 }
 
 export async function getMe() {

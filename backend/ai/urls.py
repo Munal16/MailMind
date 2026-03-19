@@ -1,7 +1,19 @@
-﻿from django.urls import path
-from .api import predict_one, predict_batch
+from django.urls import path
+
+from .api import (
+    ai_summary,
+    analyze_email,
+    analyze_latest_emails,
+    contextual_search,
+    list_tasks,
+    priority_emails,
+)
 
 urlpatterns = [
-    path("predict/<str:gmail_id>/", predict_one),
-    path("predict-batch/", predict_batch),
+    path("analyze/<str:gmail_id>/", analyze_email),
+    path("analyze-latest/", analyze_latest_emails),
+    path("tasks/", list_tasks),
+    path("priority-emails/", priority_emails),
+    path("summary/", ai_summary),
+    path("search/", contextual_search),
 ]

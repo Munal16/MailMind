@@ -6,8 +6,5 @@ class AiConfig(AppConfig):
     name = "ai"
 
     def ready(self):
-        try:
-            from .ml_classifier import load_models
-            load_models()
-        except Exception as e:
-            print("ML models not loaded:", e)
+        # Keep startup fast; models are loaded lazily on first AI request.
+        print("MailMind AI services ready. Models will load on first use.")

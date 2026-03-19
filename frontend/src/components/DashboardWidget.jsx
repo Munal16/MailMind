@@ -1,9 +1,27 @@
-export default function DashboardWidget({ title, value, trend }) {
+﻿import { cn } from "../lib/utils";
+
+const colorClasses = {
+  primary: "bg-primary/10 text-primary",
+  success: "bg-success/10 text-success",
+  warning: "bg-warning/10 text-warning",
+  urgent: "bg-urgent/10 text-urgent",
+};
+
+export default function DashboardWidget({ title, value, change, icon: Icon, color = "primary" }) {
   return (
-    <div className="rounded-2xl border border-slate-300/20 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/70">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{title}</div>
-      <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-50">{value}</div>
-      <div className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">{trend}</div>
+    <div className="rounded-xl border border-border bg-card p-5 shadow-card transition-all hover:-translate-y-1 hover:shadow-card-hover">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm text-muted-foreground">{title}</p>
+          <p className="mt-2 text-2xl font-bold tracking-tight text-card-foreground">{value}</p>
+          {change ? <p className="mt-2 text-xs font-medium text-success">{change}</p> : null}
+        </div>
+        {Icon ? (
+          <div className={cn("rounded-lg p-2.5", colorClasses[color] || colorClasses.primary)}>
+            <Icon className="h-5 w-5" />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

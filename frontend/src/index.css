@@ -5,36 +5,136 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 224 30% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 30% 12%;
+    --primary: 234 89% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 270 60% 58%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 10% 46%;
+    --accent: 234 89% 96%;
+    --accent-foreground: 234 89% 40%;
+    --destructive: 0 72% 56%;
+    --success: 152 60% 42%;
+    --warning: 38 92% 50%;
+    --urgent: 0 72% 56%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 234 89% 60%;
+    --glass: 0 0% 100% / 0.68;
+    --radius: 0.75rem;
+    --sidebar-background: 223 28% 99%;
+    --sidebar-foreground: 224 30% 16%;
+    --sidebar-primary: 234 89% 60%;
+    --sidebar-accent: 234 89% 96%;
+    --sidebar-border: 220 14% 90%;
+    --sidebar-ring: 234 89% 60%;
+  }
+
+  .dark {
+    --background: 224 30% 8%;
+    --foreground: 220 14% 94%;
+    --card: 224 25% 12%;
+    --card-foreground: 220 14% 94%;
+    --primary: 234 89% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 270 60% 62%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 224 20% 16%;
+    --muted-foreground: 220 10% 55%;
+    --accent: 234 40% 20%;
+    --accent-foreground: 234 89% 75%;
+    --destructive: 0 72% 56%;
+    --success: 152 60% 42%;
+    --warning: 38 92% 50%;
+    --urgent: 0 72% 56%;
+    --border: 224 20% 18%;
+    --input: 224 20% 18%;
+    --ring: 234 89% 65%;
+    --glass: 224 25% 12% / 0.72;
+    --sidebar-background: 224 26% 10%;
+    --sidebar-foreground: 220 14% 94%;
+    --sidebar-primary: 234 89% 65%;
+    --sidebar-accent: 234 40% 20%;
+    --sidebar-border: 224 20% 18%;
+    --sidebar-ring: 234 89% 65%;
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
   html,
   body,
   #root {
-    @apply min-h-full;
+    min-height: 100%;
+  }
+
+  html {
+    @apply bg-background text-foreground;
   }
 
   body {
     font-family: "Inter", sans-serif;
-    @apply antialiased transition-colors duration-300;
+    @apply bg-background text-foreground antialiased transition-colors duration-300;
+    background-image:
+      radial-gradient(circle at top left, hsl(var(--primary) / 0.1), transparent 26%),
+      radial-gradient(circle at 80% 20%, hsl(var(--secondary) / 0.09), transparent 24%),
+      radial-gradient(circle at bottom right, hsl(300 60% 55% / 0.08), transparent 20%);
+    background-attachment: fixed;
   }
 
-  body.light {
-    background:
-      radial-gradient(circle at 0% 0%, #e8ecff 0%, transparent 45%),
-      radial-gradient(circle at 100% 100%, #e5f4ff 0%, transparent 40%),
-      #f4f6fb;
-    color: #0f172a;
-  }
-
-  body.dark {
-    background:
-      radial-gradient(circle at 0% 0%, #1d2a44 0%, transparent 45%),
-      radial-gradient(circle at 100% 100%, #172f46 0%, transparent 40%),
-      #0b1220;
-    color: #e2e8f0;
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
   }
 }
 
-* {
-  box-sizing: border-box;
+@layer utilities {
+  .glass-panel {
+    background: hsl(var(--glass));
+    backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--border));
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+  }
+
+  .gradient-hero {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)),
+      hsl(var(--secondary)),
+      hsl(300 60% 55%)
+    );
+  }
+
+  .shadow-card {
+    box-shadow: 0 4px 16px hsl(var(--foreground) / 0.06);
+  }
+
+  .shadow-card-hover {
+    box-shadow: 0 8px 32px hsl(var(--foreground) / 0.08);
+  }
+
+  .shadow-glow {
+    box-shadow: 0 0 40px hsl(var(--primary) / 0.15);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 }
 
 *::-webkit-scrollbar {
@@ -43,6 +143,6 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.45);
+  background: hsl(var(--muted-foreground) / 0.35);
   border-radius: 999px;
 }

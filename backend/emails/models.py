@@ -26,6 +26,8 @@ class EmailMessage(models.Model):
     subject = models.TextField(blank=True, null=True)
     sender = models.TextField(blank=True, null=True)
     snippet = models.TextField(blank=True, null=True)
+    full_body_text = models.TextField(blank=True, null=True)
+    project_name = models.CharField(max_length=255, blank=True, null=True)
 
     # Use Gmail "internalDate" (ms since epoch)
     internal_date = models.DateTimeField(blank=True, null=True)

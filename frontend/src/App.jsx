@@ -1,10 +1,11 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+﻿import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import RequireAuth from "./components/RequireAuth";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ConnectEmail from "./pages/ConnectEmail";
+import GoogleAuthCallback from "./pages/GoogleAuthCallback";
 import Dashboard from "./pages/Dashboard";
 import Inbox from "./pages/Inbox";
 import PriorityEmails from "./pages/PriorityEmails";
@@ -21,7 +22,15 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/connect-email" element={<ConnectEmail />} />
+        <Route
+          path="/connect-email"
+          element={
+            <RequireAuth>
+              <ConnectEmail />
+            </RequireAuth>
+          }
+        />
+        <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
 
         <Route
           path="/app"

@@ -10,12 +10,15 @@ backend/.venv/
 backend/__pycache__/
 backend/**/*.pyc
 backend/.env
+backend/.env.production
 
 # Django
 backend/staticfiles/
 backend/media/
+*.log
 
 # Node
 frontend/node_modules/
 frontend/dist/
 frontend/.env
+frontend/.env.production

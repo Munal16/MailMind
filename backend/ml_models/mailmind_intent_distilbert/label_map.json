@@ -1,0 +1,18 @@
+{
+  "label2id": {
+    "General": 0,
+    "Promotions": 1,
+    "Social": 2,
+    "Spam": 3,
+    "Updates": 4,
+    "Verification": 5
+  },
+  "id2label": {
+    "0": "General",
+    "1": "Promotions",
+    "2": "Social",
+    "3": "Spam",
+    "4": "Updates",
+    "5": "Verification"
+  }
+}

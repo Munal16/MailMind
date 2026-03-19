@@ -1,72 +1,83 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
+  AlertTriangle,
   BarChart3,
-  BrainCircuit,
+  CheckSquare,
   Inbox,
   LayoutDashboard,
   LogOut,
   Paperclip,
   Search,
   Settings,
-  Target,
-  CheckSquare,
 } from "lucide-react";
+import { Sidebar as ShellSidebar, useSidebar } from "./ui/sidebar";
+import { cn } from "../lib/utils";
+import { logout } from "../api/auth";
+import BrandLogo from "./BrandLogo";
 
-const menu = [
+const items = [
   { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/inbox", label: "Inbox", icon: Inbox },
-  { to: "/app/priority", label: "Priority Emails", icon: Target },
+  { to: "/app/priority", label: "Priority Emails", icon: AlertTriangle },
   { to: "/app/tasks", label: "Tasks Extracted", icon: CheckSquare },
   { to: "/app/attachments", label: "Attachments", icon: Paperclip },
   { to: "/app/search", label: "Contextual Search", icon: Search },
   { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
+function NavItem({ to, label, icon, destructive = false, onClick }) {
+  const { collapsed } = useSidebar();
+
+  return (
+    <NavLink
+      to={to}
+      onClick={onClick}
+      className={({ isActive }) =>
+        cn(
+          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all hover:bg-accent/30",
+          isActive && !destructive && "bg-accent text-accent-foreground font-medium",
+          destructive && "text-destructive hover:bg-destructive/10",
+          collapsed && "justify-center px-0"
+        )
+      }
+    >
+      {(() => { const IconComponent = icon; return <IconComponent className="h-4.5 w-4.5 shrink-0" />; })()}
+      {!collapsed ? <span>{label}</span> : null}
+    </NavLink>
+  );
+}
+
 export default function Sidebar() {
+  const { collapsed } = useSidebar();
   const navigate = useNavigate();
 
   return (
-    <aside className="hidden w-[280px] shrink-0 rounded-2xl border border-slate-300/20 bg-white/70 p-4 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/70 lg:block">
-      <div className="mb-6 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 p-4 text-white">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <BrainCircuit className="h-4 w-4" />
-          MailMind
-        </div>
-        <div className="mt-2 text-xs text-indigo-100">AI Powered Email Intelligence</div>
+    <ShellSidebar className="border border-sidebar-border bg-sidebar/95 p-4 shadow-card">
+      <div className={cn("px-2 pb-6", collapsed && "flex justify-center px-0")}>
+        <BrandLogo size={collapsed ? "xs" : "sm"} showWordmark={!collapsed} />
       </div>
 
-      <nav className="space-y-1">
-        {menu.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
-                isActive
-                  ? "bg-indigo-500 text-white shadow"
-                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-              }`
-            }
-          >
-            <item.icon className="h-4 w-4" />
-            {item.label}
-          </NavLink>
+      <nav className="space-y-1.5">
+        {items.map((item) => (
+          <NavItem key={item.to} {...item} />
         ))}
       </nav>
 
-      <button
-        type="button"
-        onClick={() => {
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("refresh_token");
-          navigate("/login");
-        }}
-        className="mt-6 flex items-center gap-2 rounded-xl border border-slate-300/20 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-      >
-        <LogOut className="h-4 w-4" />
-        Logout
-      </button>
-    </aside>
+      <div className="mt-auto space-y-1.5 pt-6">
+        <NavItem to="/app/settings" label="Settings" icon={Settings} />
+        <NavItem
+          to="/"
+          label="Logout"
+          icon={LogOut}
+          destructive
+          onClick={(event) => {
+            event.preventDefault();
+            logout();
+            navigate("/", { replace: true });
+          }}
+        />
+      </div>
+    </ShellSidebar>
   );
 }
+

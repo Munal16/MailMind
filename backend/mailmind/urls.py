@@ -11,7 +11,5 @@ urlpatterns = [
     path("api/users/", include("users.urls")),
     path("api/gmail/", include("emails.urls")),
     path("api/ai/", include("ai.urls")),
-    path("api/ai/admin/", include("ai.admin_urls")),
-    path("api/ai/dataset/", include("ai.dataset_urls")),
     path("api/analytics/", include("analyticsapp.urls")),
 ]

@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.http import HttpResponse
 
-from .gmail_service import get_gmail_service
+from .gmail_service import GmailAuthError, get_gmail_service
 from .models import EmailMessage
 
 
@@ -16,7 +16,10 @@ def download_attachment(request, gmail_id, attachment_id):
     if not email:
         return Response({"error": "Email not found in DB. Sync first."}, status=404)
 
-    service = get_gmail_service(request.user)
+    try:
+        service = get_gmail_service(request.user)
+    except GmailAuthError as exc:
+        return Response({"error": str(exc), "requires_reconnect": True}, status=400)
 
     att = (
         service.users()

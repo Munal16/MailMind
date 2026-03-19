@@ -1,76 +1,126 @@
-import { Link } from "react-router-dom";
-import { BrainCircuit, CalendarCheck2, ChartNoAxesCombined, Files, ListChecks, SearchCheck, Sparkles } from "lucide-react";
+﻿import { Link } from "react-router-dom";
+import { BarChart3, CheckSquare, Mail, Paperclip, Search, Target, Zap } from "lucide-react";
+import { Button } from "../components/ui/button";
+import BrandLogo from "../components/BrandLogo";
 
 const features = [
-  "AI Urgency Detection",
-  "Intent Classification",
-  "Smart Email Sorting",
-  "Task Extraction",
-  "Attachment Hub",
-  "Contextual Search",
-  "Productivity Analytics",
+  { icon: Zap, title: "AI Urgency Detection", description: "Detect high-pressure threads before deadlines slip." },
+  { icon: Target, title: "Intent Classification", description: "Understand whether an email is a request, update, meeting, or action item." },
+  { icon: Mail, title: "Smart Email Sorting", description: "Automatically group emails into focused working lanes." },
+  { icon: CheckSquare, title: "Task Extraction", description: "Turn buried asks into clear, trackable actions." },
+  { icon: Paperclip, title: "Attachment Hub", description: "Keep files organized by project, sender, and context." },
+  { icon: Search, title: "Contextual Search", description: "Ask for emails in natural language and get faster answers." },
+  { icon: BarChart3, title: "Productivity Analytics", description: "Measure urgency load, response trends, and project traffic." },
 ];
 
 export default function Landing() {
   return (
-    <div className="min-h-screen px-4 py-10">
-      <div className="mx-auto max-w-6xl space-y-16">
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-lg font-bold">
-            <BrainCircuit className="h-5 w-5 text-indigo-500" />
-            MailMind
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-20 border-b border-border bg-card/80 backdrop-blur-lg">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 lg:px-6">
+          <Link to="/" className="transition-transform duration-200 hover:scale-[1.01]">
+            <BrandLogo size="sm" />
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link to="/login"><Button variant="ghost">Login</Button></Link>
+            <Link to="/register"><Button variant="hero">Get Started</Button></Link>
           </div>
-          <div className="flex gap-2">
-            <Link to="/login" className="rounded-xl border border-slate-300/30 px-4 py-2 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Login</Link>
-            <Link to="/register" className="rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-500">Register</Link>
-          </div>
-        </header>
+        </div>
+      </header>
 
-        <section className="grid gap-8 rounded-3xl border border-slate-300/20 bg-white/70 p-8 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-900/70 lg:grid-cols-2">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
-              <Sparkles className="h-3.5 w-3.5" />
-              AI Powered Email Intelligence
+      <main>
+        <section className="mx-auto max-w-6xl px-4 py-20 lg:px-6 lg:py-28">
+          <div className="mx-auto max-w-4xl text-center">
+            <div className="mb-5 flex justify-center">
+              <BrandLogo size="md" className="justify-center" />
             </div>
-            <h1 className="mt-4 text-4xl font-extrabold leading-tight">Organize, prioritize, and analyze your inbox with AI.</h1>
-            <p className="mt-4 text-slate-600 dark:text-slate-300">
-              MailMind turns chaotic inboxes into actionable workflows with urgency scoring, intent detection, task extraction, and attachment intelligence.
-            </p>
-            <div className="mt-6 flex gap-3">
-              <Link to="/register" className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">Get Started</Link>
-              <Link to="/connect-email" className="rounded-xl border border-slate-300/30 px-5 py-2.5 text-sm font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Connect Gmail</Link>
+            <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground">
+              <Zap className="h-4 w-4" />
+              Powered by AI
+            </div>
+            <h1 className="mt-6 text-5xl font-extrabold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
+              AI Powered Email
+              <br />
+              <span className="text-gradient">Intelligence</span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">Organize, prioritize, and analyze your inbox with AI.</p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link to="/register"><Button variant="hero" size="lg">Get Started</Button></Link>
+              <Link to="/connect-email"><Button variant="hero-outline" size="lg">Connect Gmail</Button></Link>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {[CalendarCheck2, ListChecks, Files, SearchCheck, ChartNoAxesCombined, BrainCircuit].map((Icon, idx) => (
-              <div key={idx} className="rounded-2xl border border-slate-300/20 bg-white/80 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-                <Icon className="h-5 w-5 text-indigo-500" />
-                <div className="mt-2 text-xs text-slate-500">Live preview module</div>
+
+          <div className="mt-16 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="gradient-hero rounded-3xl p-[1px] shadow-glow">
+              <div className="glass-panel rounded-[calc(var(--radius)*2)] p-8">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <div className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">Operational clarity</div>
+                    <h2 className="mt-3 text-3xl font-bold">One workspace for urgency, intent, tasks, and attachments.</h2>
+                    <p className="mt-4 text-sm leading-7 text-muted-foreground">MailMind gives teams a triage-first email experience with structured insights and clean execution paths.</p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {[
+                      "Urgent lane auto-detection",
+                      "Task extraction",
+                      "Attachment intelligence",
+                      "Project-level grouping",
+                    ].map((item) => (
+                      <div key={item} className="rounded-2xl border border-border bg-card/70 p-4 text-sm text-card-foreground shadow-card">{item}</div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            ))}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+              {[
+                { title: "Inbox triage", text: "Surface the most important work instantly." },
+                { title: "Attachment visibility", text: "Files remain accessible without digging through threads." },
+                { title: "Executive analytics", text: "Track urgency, response pressure, and team throughput." },
+              ].map((card) => (
+                <div key={card.title} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+                  <div className="text-sm font-semibold text-card-foreground">{card.title}</div>
+                  <p className="mt-2 text-sm text-muted-foreground">{card.text}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
-        <section>
-          <h2 className="text-2xl font-bold">Features</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {features.map((f) => (
-              <div key={f} className="rounded-xl border border-slate-300/20 bg-white/70 p-4 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
-                {f}
-              </div>
-            ))}
+        <section className="mx-auto max-w-6xl px-4 pb-20 lg:px-6 lg:pb-28">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {features.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <div key={feature.title} className="rounded-xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-1 hover:shadow-card-hover">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="mt-4 text-lg font-semibold">{feature.title}</div>
+                  <p className="mt-2 text-sm text-muted-foreground">{feature.description}</p>
+                </div>
+              );
+            })}
           </div>
         </section>
+      </main>
 
-        <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-300/20 pt-6 text-sm text-slate-500 dark:border-slate-700">
-          <div>© 2026 MailMind</div>
-          <div className="flex gap-4">
+      <footer className="border-t border-border bg-card">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between lg:px-6">
+          <div className="flex items-center gap-3">
+            <BrandLogo size="xs" />
+            <div>
+              <div>AI-powered email intelligence for modern teams.</div>
+            </div>
+          </div>
+          <div className="flex gap-6">
             <a href="#">Privacy</a>
             <a href="#">Terms</a>
             <a href="#">Contact</a>
           </div>
-        </footer>
-      </div>
+        </div>
+      </footer>
     </div>
   );
 }

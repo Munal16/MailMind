@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-mailmind_db}
+      POSTGRES_USER: ${DB_USER:-mailmind_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env.production
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      - db
+    volumes:
+      - backend_static:/app/staticfiles
+    command: >
+      sh -c "
+      python manage.py migrate &&
+      python manage.py collectstatic --noinput &&
+      gunicorn mailmind.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
+      "
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ""
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    volumes:
+      - backend_static:/var/www/static:ro
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  backend_static:

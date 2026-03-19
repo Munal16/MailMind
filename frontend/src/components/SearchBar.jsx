@@ -1,14 +1,16 @@
 import { Search } from "lucide-react";
+import { cn } from "../lib/utils";
 
-export default function SearchBar({ value, onChange, placeholder = "Search..." }) {
+export default function SearchBar({ value, onChange, placeholder = "Search emails, tasks, attachments...", className, onKeyDown }) {
   return (
-    <div className="flex w-full items-center gap-2 rounded-xl border border-slate-300/20 bg-white/60 px-3 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
-      <Search className="h-4 w-4 text-slate-500" />
+    <div className={cn("relative flex w-full items-center", className)}>
+      <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" />
       <input
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
-        className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+        className="h-10 w-full rounded-lg border border-input bg-muted/50 pl-10 pr-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
       />
     </div>
   );

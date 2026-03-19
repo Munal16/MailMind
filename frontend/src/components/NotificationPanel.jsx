@@ -1,25 +1,28 @@
-import { Bell } from "lucide-react";
+import { Bell, TriangleAlert } from "lucide-react";
 
-const notifications = [
-  "3 urgent emails need attention",
-  "2 tasks due in next 6 hours",
-  "Weekly analytics report is ready",
-];
-
-export default function NotificationPanel() {
+export default function NotificationPanel({ title = "Notifications", items = [] }) {
   return (
-    <div className="rounded-xl border border-slate-300/20 bg-white/70 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
-      <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
-        <Bell className="h-4 w-4 text-indigo-500" />
-        Notifications
+    <div className="rounded-xl border border-border bg-card p-5 shadow-card">
+      <div className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+        <Bell className="h-4 w-4 text-primary" />
+        {title}
       </div>
-      <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
-        {notifications.map((n) => (
-          <li key={n} className="rounded-md bg-slate-100/70 px-2 py-1 dark:bg-slate-800/70">
-            {n}
-          </li>
-        ))}
-      </ul>
+      <div className="mt-4 space-y-3">
+        {items.length ? (
+          items.map((item) => (
+            <div key={item} className="flex items-start gap-3 rounded-lg bg-muted/50 p-3">
+              <div className="mt-0.5 rounded-full bg-urgent/10 p-1.5 text-urgent">
+                <TriangleAlert className="h-3.5 w-3.5" />
+              </div>
+              <div className="text-sm text-muted-foreground">{item}</div>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
+            No active notifications right now.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

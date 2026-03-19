@@ -1,31 +1,59 @@
-const urgencyColor = {
-  High: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300",
-  Medium: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
-  Low: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
-};
+﻿import { CheckSquare, Paperclip } from "lucide-react";
+import { Badge } from "./ui/badge";
+import { cn } from "../lib/utils";
 
-export default function EmailCard({ email, compact = false }) {
+function urgencyVariant(urgency) {
+  const key = String(urgency || "").toLowerCase();
+  if (key === "high") return "high";
+  if (key === "medium") return "medium";
+  return "low";
+}
+
+export default function EmailCard({
+  sender,
+  subject,
+  preview,
+  time,
+  urgency,
+  intent,
+  project,
+  hasTask,
+  hasAttachment,
+  selected,
+  onClick,
+}) {
   return (
-    <div className="rounded-xl border border-slate-300/20 bg-white/80 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm font-semibold">{email.sender}</div>
-        <div className="text-xs text-slate-500">{email.timestamp}</div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group relative flex w-full items-start gap-3 border-b border-border px-4 py-4 text-left transition-all hover:bg-accent/30",
+        selected && "bg-accent/50 before:absolute before:bottom-0 before:left-0 before:top-0 before:w-0.5 before:bg-primary"
+      )}
+    >
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        <div className="gradient-primary mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white">
+          {(sender || "?").slice(0, 2).toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">{sender}</span>
+            <Badge variant={urgencyVariant(urgency)}>{urgency}</Badge>
+            {intent ? <Badge variant="muted">{intent}</Badge> : null}
+            {project ? <Badge variant="accent">{project}</Badge> : null}
+          </div>
+          <div className="mt-1 text-sm font-medium text-card-foreground">{subject}</div>
+          <div className="mt-1 truncate text-xs text-muted-foreground">{preview}</div>
+        </div>
       </div>
-      <div className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{email.subject}</div>
-      {!compact && <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">{email.preview}</div>}
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-        <span className={`rounded-full px-2 py-1 font-semibold ${urgencyColor[email.urgency] || ""}`}>
-          {email.urgency}
-        </span>
-        <span className="rounded-full bg-indigo-100 px-2 py-1 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
-          {email.intent}
-        </span>
-        {email.task && (
-          <span className="rounded-full bg-violet-100 px-2 py-1 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
-            Task Extracted
-          </span>
-        )}
+
+      <div className="flex shrink-0 flex-col items-end gap-2">
+        <span className="text-xs text-muted-foreground">{time}</span>
+        <div className="flex items-center gap-1 text-muted-foreground">
+          {hasTask ? <CheckSquare className="h-4 w-4" /> : null}
+          {hasAttachment ? <Paperclip className="h-4 w-4" /> : null}
+        </div>
       </div>
-    </div>
+    </button>
   );
 }
