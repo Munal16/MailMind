@@ -1,7 +1,8 @@
-﻿import { useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { setAuthTokens } from "../api/auth";
+import { getDefaultAppRoute, getMe, setAuthTokens } from "../api/auth";
+import { Button } from "../components/ui/button";
 import BrandLogo from "../components/BrandLogo";
 
 export default function GoogleAuthCallback() {
@@ -9,13 +10,34 @@ export default function GoogleAuthCallback() {
   const [params] = useSearchParams();
   const access = params.get("access");
   const refresh = params.get("refresh");
-  const error = !access || !refresh ? "Google login did not return valid tokens." : "";
+  const serverError = params.get("error");
+  const error = serverError || (!access || !refresh ? "Google login did not return valid tokens." : "");
 
   useEffect(() => {
-    if (!access || !refresh) return;
-    setAuthTokens(access, refresh);
-    navigate("/app/dashboard", { replace: true });
-  }, [access, refresh, navigate]);
+    if (!access || !refresh || serverError) return;
+
+    let cancelled = false;
+
+    const finishLogin = async () => {
+      try {
+        setAuthTokens(access, refresh);
+        const profile = await getMe();
+        if (!cancelled) {
+          navigate(getDefaultAppRoute(profile), { replace: true });
+        }
+      } catch {
+        if (!cancelled) {
+          navigate("/login", { replace: true });
+        }
+      }
+    };
+
+    void finishLogin();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [access, refresh, navigate, serverError]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -25,6 +47,11 @@ export default function GoogleAuthCallback() {
           <>
             <h1 className="mt-6 text-xl font-semibold text-foreground">Google login failed</h1>
             <p className="mt-3 text-sm text-muted-foreground">{error}</p>
+            <div className="mt-6 flex justify-center">
+              <Button variant="hero" onClick={() => navigate("/login", { replace: true })}>
+                Back to login
+              </Button>
+            </div>
           </>
         ) : (
           <>

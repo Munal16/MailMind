@@ -1,10 +1,12 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Mail, LockKeyhole } from "lucide-react";
-import { getGoogleLoginUrl, loginUser } from "../api/auth";
+import { House, LockKeyhole, Mail } from "lucide-react";
+import { getDefaultAppRoute, getGoogleLoginUrl, getMe, loginUser } from "../api/auth";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import BrandLogo from "../components/BrandLogo";
+import { formatLoginError, validateLoginForm } from "../utils/authFeedback";
+import "./Login.css";
 
 function GoogleIcon() {
   return (
@@ -29,13 +31,21 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+
+    const validationMessage = validateLoginForm({ emailOrUsername, password });
+    if (validationMessage) {
+      setError(validationMessage);
+      return;
+    }
+
     setLoading(true);
     try {
-      await loginUser({ username: emailOrUsername, password });
-      const next = location.state?.from || "/app/dashboard";
+      await loginUser({ username: emailOrUsername.trim(), password });
+      const profile = await getMe();
+      const next = location.state?.from || getDefaultAppRoute(profile);
       navigate(next, { replace: true });
     } catch (err) {
-      setError(typeof err.response?.data === "string" ? err.response.data : JSON.stringify(err.response?.data || err.message));
+      setError(formatLoginError(err));
     } finally {
       setLoading(false);
     }
@@ -48,51 +58,82 @@ export default function Login() {
       const authorizationUrl = await getGoogleLoginUrl();
       window.location.href = authorizationUrl;
     } catch (err) {
-      setError(typeof err.response?.data === "string" ? err.response.data : JSON.stringify(err.response?.data || err.message));
+      setError(formatLoginError(err));
       setGoogleLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <BrandLogo size="lg" className="justify-center" />
-          <h1 className="mt-5 text-3xl font-bold tracking-tight text-foreground">Welcome back</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Sign in to your MailMind account</p>
+    <div className="login-page">
+      <div className="login-page__glow login-page__glow--primary" />
+      <div className="login-page__glow login-page__glow--secondary" />
+
+      <div className="login-page__container">
+        <div className="login-page__intro">
+          <Link to="/" className="login-page__backlink">
+            <House className="h-4 w-4" />
+            Back to home
+          </Link>
+
+          <div className="login-page__header">
+            <div className="login-page__eyebrow">Sign in</div>
+            <h1 className="login-page__title">Welcome back to MailMind</h1>
+            <p className="login-page__description">Sign in to check your inbox, tasks, and attachments.</p>
+            <p className="login-page__helper-note">Google sign-in logs you into MailMind first.</p>
+          </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-card-foreground">Email or username</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={emailOrUsername} onChange={(e) => setEmailOrUsername(e.target.value)} placeholder="name@company.com" className="pl-10" />
+        <section className="login-page__card">
+          <div className="login-page__brand-wrap">
+            <BrandLogo size="lg" className="justify-center" />
+          </div>
+
+          <form onSubmit={handleLogin} className="login-page__form">
+            <div className="login-page__field-group">
+              <label className="login-page__label">Email or username</label>
+              <div className="login-page__field-shell">
+                <Mail className="login-page__field-icon" />
+                <Input
+                  value={emailOrUsername}
+                  onChange={(e) => setEmailOrUsername(e.target.value)}
+                  placeholder="email@gmail.com"
+                  className="login-page__input"
+                  autoComplete="username"
+                />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-card-foreground">Password</label>
-              <div className="relative">
-                <LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" className="pl-10" />
+            <div className="login-page__field-group">
+              <label className="login-page__label">Password</label>
+              <div className="login-page__field-shell">
+                <LockKeyhole className="login-page__field-icon" />
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="login-page__input"
+                  autoComplete="current-password"
+                />
               </div>
             </div>
 
-            <Button type="submit" variant="hero" className="w-full" disabled={loading}>{loading ? "Signing in..." : "Login"}</Button>
-            <Button type="button" variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={googleLoading}>
+            <Button type="submit" variant="hero" className="login-page__primary-action" disabled={loading}>
+              {loading ? "Signing in..." : "Sign in"}
+            </Button>
+
+            <Button type="button" variant="outline" className="login-page__secondary-action" onClick={handleGoogleLogin} disabled={googleLoading}>
               <GoogleIcon />
-              <span className="ml-2">{googleLoading ? "Redirecting to Google..." : "Login with Google"}</span>
+              <span>{googleLoading ? "Redirecting to Google..." : "Continue with Google"}</span>
             </Button>
           </form>
 
-          {error ? <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div> : null}
+          {error ? <div className="login-page__error">{error}</div> : null}
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            Need an account? <Link to="/register" className="font-semibold text-primary hover:underline">Register</Link>
+          <div className="login-page__footer-note">
+            Need an account? <Link to="/register">Create one</Link>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

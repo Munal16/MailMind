@@ -40,7 +40,7 @@ export default function BrandLogo({
   const id = useId().replace(/:/g, "");
 
   return (
-    <div className={cn("inline-flex items-center", styles.gap, className)} aria-label="MailMind">
+    <div className={cn("inline-flex items-center overflow-visible", styles.gap, className)} aria-label="MailMind">
       <div className={cn("relative shrink-0", styles.mark, markClassName)}>
         <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_28%_52%,hsl(var(--primary)/0.33),transparent_48%),radial-gradient(circle_at_76%_52%,hsl(var(--secondary)/0.30),transparent_44%),radial-gradient(circle_at_54%_48%,hsl(var(--card)/0.92),transparent_22%)] blur-xl" />
 
@@ -115,7 +115,7 @@ export default function BrandLogo({
       {showWordmark ? (
         <div
           className={cn(
-            "whitespace-nowrap text-left font-black italic leading-none tracking-[-0.065em]",
+            "whitespace-nowrap overflow-visible pr-[0.18em] text-left font-black italic leading-none tracking-[-0.045em]",
             styles.wordmark,
             wordmarkClassName
           )}

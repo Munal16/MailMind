@@ -1,15 +1,32 @@
 ﻿import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { House, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { loginUser, registerUser } from "../api/auth";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import BrandLogo from "../components/BrandLogo";
+import { formatRegisterError, validateRegisterForm } from "../utils/authFeedback";
+import "./Register.css";
 
 const fields = [
-  { key: "name", label: "Name", type: "text", placeholder: "Munal Pandey" },
-  { key: "email", label: "Email", type: "email", placeholder: "Munal16@gmail.com" },
-  { key: "password", label: "Password", type: "password", placeholder: "Create a password" },
-  { key: "confirmPassword", label: "Confirm Password", type: "password", placeholder: "Re-Enter your password" },
+  { key: "name", label: "Full name", type: "text", placeholder: "Your name", icon: UserRound, autoComplete: "name" },
+  { key: "email", label: "Email", type: "email", placeholder: "email@gmail.com", icon: Mail },
+  {
+    key: "password",
+    label: "Password",
+    type: "password",
+    placeholder: "Use at least 6 characters",
+    icon: LockKeyhole,
+    autoComplete: "new-password",
+  },
+  {
+    key: "confirmPassword",
+    label: "Confirm password",
+    type: "password",
+    placeholder: "Re-enter your password",
+    icon: LockKeyhole,
+    autoComplete: "new-password",
+  },
 ];
 
 export default function Register() {
@@ -23,49 +40,91 @@ export default function Register() {
   const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match.");
+
+    const validationMessage = validateRegisterForm(form);
+    if (validationMessage) {
+      setError(validationMessage);
       return;
     }
 
     setLoading(true);
     try {
-      await registerUser({ username: form.name || form.email, email: form.email, password: form.password });
-      await loginUser({ username: form.name || form.email, password: form.password });
+      const email = form.email.trim().toLowerCase();
+      const fullName = form.name.trim();
+
+      await registerUser({
+        username: email,
+        email,
+        password: form.password,
+        full_name: fullName,
+      });
+      await loginUser({ username: email, password: form.password });
       navigate("/connect-email", { replace: true });
     } catch (err) {
-      setError(typeof err.response?.data === "string" ? err.response.data : JSON.stringify(err.response?.data || err.message));
+      setError(formatRegisterError(err));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <BrandLogo size="lg" className="justify-center" />
-          <h1 className="mt-5 text-3xl font-bold tracking-tight text-foreground">Create your account</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Start managing your inbox with MailMind</p>
-        </div>
+    <div className="register-page">
+      <div className="register-page__glow register-page__glow--primary" />
+      <div className="register-page__glow register-page__glow--secondary" />
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-          <form onSubmit={handleRegister} className="space-y-4">
-            {fields.map((field) => (
-              <div key={field.key} className="space-y-2">
-                <label className="text-sm font-medium text-card-foreground">{field.label}</label>
-                <Input type={field.type} value={form[field.key]} onChange={(e) => handleChange(field.key, e.target.value)} placeholder={field.placeholder} />
-              </div>
-            ))}
-            <Button type="submit" variant="hero" className="w-full" disabled={loading}>{loading ? "Creating account..." : "Create Account"}</Button>
-          </form>
+      <div className="register-page__container">
+        <div className="register-page__intro">
+          <Link to="/" className="register-page__backlink">
+            <House className="h-4 w-4" />
+            Back to home
+          </Link>
 
-          {error ? <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div> : null}
-
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account? <Link to="/login" className="font-semibold text-primary hover:underline">Login</Link>
+          <div className="register-page__header">
+            <div className="register-page__eyebrow">Create account</div>
+            <h1 className="register-page__title">Create your MailMind account</h1>
+            <p className="register-page__description">Create your account to get started with MailMind.</p>
+            <p className="register-page__helper-note">You can connect Gmail in the next step.</p>
           </div>
         </div>
+
+        <section className="register-page__card">
+          <div className="register-page__brand-wrap">
+            <BrandLogo size="lg" className="justify-center" />
+          </div>
+
+          <form onSubmit={handleRegister} className="register-page__form">
+            {fields.map((field) => {
+              const Icon = field.icon;
+
+              return (
+                <div key={field.key} className="register-page__field-group">
+                  <label className="register-page__label">{field.label}</label>
+                  <div className="register-page__field-shell">
+                    <Icon className="register-page__field-icon" />
+                    <Input
+                      type={field.type}
+                      value={form[field.key]}
+                      onChange={(e) => handleChange(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      className="register-page__input"
+                      autoComplete={field.autoComplete || (field.key === "email" ? "email" : undefined)}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+
+            <Button type="submit" variant="hero" className="register-page__primary-action" disabled={loading}>
+              {loading ? "Creating account..." : "Create account"}
+            </Button>
+          </form>
+
+          {error ? <div className="register-page__error">{error}</div> : null}
+
+          <div className="register-page__footer-note">
+            Already have an account? <Link to="/login">Sign in</Link>
+          </div>
+        </section>
       </div>
     </div>
   );

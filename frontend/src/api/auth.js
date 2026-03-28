@@ -26,6 +26,13 @@ export async function getMe() {
   return res.data;
 }
 
+export function getDefaultAppRoute(profile) {
+  if (profile?.is_staff || profile?.is_superuser) {
+    return "/app/admin";
+  }
+  return "/app/dashboard";
+}
+
 export function logout() {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");

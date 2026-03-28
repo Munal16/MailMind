@@ -1,236 +1,580 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  ArrowRight,
   BarChart3,
   CheckSquare,
+  FolderKanban,
   Mail,
-  Paperclip,
+  RefreshCcw,
   Sparkles,
   Users,
 } from "lucide-react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import DashboardWidget from "../components/DashboardWidget";
-import AnalyticsChart from "../components/AnalyticsChart";
-import NotificationPanel from "../components/NotificationPanel";
 import { Avatar } from "../components/ui/avatar";
 import { Button } from "../components/ui/button";
 import api from "../api/client";
+import "./Dashboard.css";
+
+const TASK_STATUS_COLORS = {
+  Pending: "hsl(var(--warning))",
+  "In Progress": "hsl(var(--primary))",
+  Completed: "hsl(var(--success))",
+};
+
+function formatDashboardError(err) {
+  if (typeof err?.response?.data === "string") {
+    return err.response.data;
+  }
+  if (err?.response?.data?.error) {
+    return err.response.data.error;
+  }
+  if (err?.response?.data?.message) {
+    return err.response.data.message;
+  }
+  return "Could not load the dashboard right now.";
+}
+
+function EmptyChartState({ title, description }) {
+  return (
+    <div className="dashboard-page__empty">
+      <div className="dashboard-page__empty-title">{title}</div>
+      <div className="dashboard-page__empty-text">{description}</div>
+    </div>
+  );
+}
+
+function chartTooltipStyle() {
+  return {
+    background: "hsl(var(--card))",
+    border: "1px solid hsl(var(--border))",
+    borderRadius: 14,
+    boxShadow: "0 18px 32px hsl(var(--foreground) / 0.12)",
+  };
+}
 
 export default function Dashboard() {
   const [summary, setSummary] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  const load = async () => {
+  const load = useCallback(async ({ showFeedback = false } = {}) => {
     try {
       setError("");
+      if (showFeedback) {
+        setRefreshing(true);
+      }
       const res = await api.get("/api/ai/summary/");
       setSummary(res.data);
+      if (showFeedback) {
+        setNotice("Dashboard updated.");
+      }
     } catch (err) {
       setSummary(null);
-      setError(typeof err.response?.data === "string" ? err.response.data : JSON.stringify(err.response?.data || err.message));
+      setError(formatDashboardError(err));
+      setNotice("");
+    } finally {
+      if (showFeedback) {
+        setRefreshing(false);
+      }
     }
-  };
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const runAiAnalysis = async () => {
     try {
       setAnalyzing(true);
       setError("");
+      setNotice("");
       await api.post("/api/ai/analyze-latest/", { limit: 50 });
       await load();
+      setNotice("AI analysis completed. Dashboard refreshed.");
     } catch (err) {
-      setError(typeof err.response?.data === "string" ? err.response.data : JSON.stringify(err.response?.data || err.message));
+      setError(formatDashboardError(err));
     } finally {
       setAnalyzing(false);
     }
   };
 
-  const widgets = useMemo(
-    () => [
+  const widgets = useMemo(() => {
+    const topProject = summary?.top_projects?.[0]?.name;
+
+    return [
       {
-        title: "Total Emails",
+        title: "Synced Emails",
         value: summary?.total_emails ?? 0,
-        change: "Synced inbox records",
+        change: `${summary?.total_predictions ?? 0} analyzed by MailMind`,
         icon: Mail,
         color: "primary",
+        changeTone: "primary",
       },
       {
-        title: "Urgent Emails",
+        title: "High Urgency",
         value: summary?.urgency_distribution?.High ?? 0,
-        change: "High-priority queue",
+        change: "Needs quick review",
         icon: AlertTriangle,
         color: "urgent",
+        changeTone: "urgent",
       },
       {
         title: "Pending Tasks",
         value: summary?.pending_tasks ?? 0,
-        change: "Extracted from email text",
+        change: `${summary?.tasks_with_deadline ?? 0} with deadline cues`,
         icon: CheckSquare,
         color: "warning",
+        changeTone: "warning",
       },
       {
-        title: "Attachments Received",
-        value: summary?.attachments_received ?? 0,
-        change: "Available in attachment organizer",
-        icon: Paperclip,
+        title: "Project Groups",
+        value: summary?.project_count ?? 0,
+        change: topProject ? `${topProject} is leading` : "Grouping ready",
+        icon: FolderKanban,
         color: "success",
+        changeTone: "success",
       },
-    ],
-    [summary]
-  );
-
-  const urgencyData = useMemo(() => {
-    const distribution = summary?.urgency_distribution || {};
-    return [
-      { name: "High", value: distribution.High ?? 0, color: "hsl(var(--urgent))" },
-      { name: "Medium", value: distribution.Medium ?? 0, color: "hsl(var(--warning))" },
-      { name: "Low", value: distribution.Low ?? 0, color: "hsl(var(--success))" },
     ];
   }, [summary]);
 
+  const urgencyTrendData = useMemo(() => summary?.weekly_urgency_trend || [], [summary]);
+  const activityData = useMemo(() => summary?.activity_timeline || [], [summary]);
+  const contacts = useMemo(() => summary?.most_active_contacts || [], [summary]);
+  const projects = useMemo(() => summary?.top_projects || [], [summary]);
+  const insights = useMemo(() => summary?.recent_insights || [], [summary]);
+
+  const taskStatusData = useMemo(
+    () =>
+      Object.entries(summary?.task_status_distribution || {}).map(([name, value]) => ({
+        name,
+        value,
+        color: TASK_STATUS_COLORS[name] || "hsl(var(--secondary))",
+      })),
+    [summary]
+  );
+
+  const taskTotal = useMemo(
+    () => taskStatusData.reduce((sum, item) => sum + Number(item.value || 0), 0),
+    [taskStatusData]
+  );
+
   const intentData = useMemo(
-    () => Object.entries(summary?.intent_distribution || {}).map(([name, value]) => ({ name, value })),
+    () =>
+      Object.entries(summary?.intent_distribution || {})
+        .sort(([, left], [, right]) => Number(right) - Number(left))
+        .slice(0, 6)
+        .map(([name, value]) => ({ name, value })),
     [summary]
   );
 
-  const activityData = summary?.activity_timeline || [];
-  const contacts = summary?.most_active_contacts || [];
-  const insights = summary?.recent_insights || [];
-  const projects = summary?.top_projects || [];
+  const dominantIntent = intentData[0];
 
-  const notifications = useMemo(
-    () => [
-      summary?.urgency_distribution?.High ? `${summary.urgency_distribution.High} urgent emails need attention.` : null,
-      summary?.tasks_with_deadline ? `${summary.tasks_with_deadline} extracted tasks include deadline cues.` : null,
-      summary?.project_count ? `${summary.project_count} active project groups are currently being tracked.` : null,
-    ].filter(Boolean),
+  const activityPeak = useMemo(() => {
+    if (!activityData.length) {
+      return null;
+    }
+    return activityData.reduce((peak, current) => (current.emails > (peak?.emails ?? -1) ? current : peak), null);
+  }, [activityData]);
+
+  const attentionQueue = useMemo(
+    () =>
+      [
+        summary?.urgency_distribution?.High
+          ? `${summary.urgency_distribution.High} high-urgency emails should be reviewed first.`
+          : null,
+        summary?.pending_tasks ? `${summary.pending_tasks} extracted tasks are still pending.` : null,
+        summary?.tasks_with_deadline
+          ? `${summary.tasks_with_deadline} tasks include deadline hints from email content.`
+          : null,
+      ].filter(Boolean),
     [summary]
   );
+
+  const maxProjectCount = Math.max(...projects.map((project) => Number(project.count || 0)), 1);
+  const maxContactCount = Math.max(...contacts.map((contact) => Number(contact.count || 0)), 1);
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="dashboard-page">
+      <div className="dashboard-page__hero">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Monitor urgency, intents, project groups, extracted tasks, and inbox activity in one place.
+          <div className="dashboard-page__eyebrow">Workspace overview</div>
+          <h1 className="dashboard-page__title">Dashboard</h1>
+          <p className="dashboard-page__description">
+            Track inbox load, urgency trends, task progress, and project activity in one clear MailMind overview.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={load}>
-            Refresh
+
+        <div className="dashboard-page__actions">
+          <Button variant="outline" onClick={() => load({ showFeedback: true })} disabled={refreshing || analyzing}>
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            {refreshing ? "Refreshing..." : "Refresh"}
           </Button>
-          <Button variant="hero-outline" onClick={runAiAnalysis} disabled={analyzing}>
+          <Button variant="hero-outline" onClick={runAiAnalysis} disabled={analyzing || refreshing}>
             {analyzing ? "Analyzing..." : "Run AI Analysis"}
           </Button>
         </div>
       </div>
 
-      {error ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-          {error}
-        </div>
-      ) : null}
+      {error ? <div className="dashboard-page__error">{error}</div> : null}
+      {notice ? <div className="dashboard-page__notice">{notice}</div> : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="dashboard-page__widgets">
         {widgets.map((widget) => (
           <DashboardWidget key={widget.title} {...widget} />
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <AnalyticsChart title="Urgency Distribution" type="pie" data={urgencyData} />
-        <AnalyticsChart
-          title="Intent Classification"
-          type="bar"
-          data={intentData}
-          xKey="name"
-          series={[{ key: "value", color: "hsl(var(--primary))" }]}
-        />
-        <AnalyticsChart
-          title="Email Activity"
-          type="line"
-          data={activityData}
-          xKey="name"
-          series={[{ key: "emails", color: "hsl(var(--secondary))" }]}
-        />
+      <div className="dashboard-page__main-grid">
+        <section className="dashboard-page__card dashboard-page__card--wide">
+          <div className="dashboard-page__card-head">
+            <div>
+              <div className="dashboard-page__card-title">Urgency trend</div>
+              <div className="dashboard-page__card-copy">Compare high, medium, and low urgency across recent weeks.</div>
+            </div>
+            <div className="dashboard-page__badge">
+              <AlertTriangle className="h-4 w-4" />
+              Priority load
+            </div>
+          </div>
+
+          <div className="dashboard-page__chip-row">
+            <span className="dashboard-page__chip dashboard-page__chip--urgent">
+              High {summary?.urgency_distribution?.High ?? 0}
+            </span>
+            <span className="dashboard-page__chip dashboard-page__chip--warning">
+              Medium {summary?.urgency_distribution?.Medium ?? 0}
+            </span>
+            <span className="dashboard-page__chip dashboard-page__chip--success">
+              Low {summary?.urgency_distribution?.Low ?? 0}
+            </span>
+          </div>
+
+          <div className="dashboard-page__chart-frame">
+            {urgencyTrendData.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={urgencyTrendData} barCategoryGap={18}>
+                  <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="4 4" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                    tickLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <YAxis
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                    tickLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <Tooltip contentStyle={chartTooltipStyle()} />
+                  <Bar dataKey="high" name="High" stackId="urgency" fill="hsl(var(--urgent))" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="medium" name="Medium" stackId="urgency" fill="hsl(var(--warning))" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="low" name="Low" stackId="urgency" fill="hsl(var(--success))" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChartState
+                title="No urgency data yet"
+                description="Run MailMind analysis to see how urgency is trending across your synced inbox."
+              />
+            )}
+          </div>
+        </section>
+
+        <section className="dashboard-page__card">
+          <div className="dashboard-page__card-head">
+            <div>
+              <div className="dashboard-page__card-title">Task status</div>
+              <div className="dashboard-page__card-copy">See how extracted tasks are distributed across your workspace.</div>
+            </div>
+          </div>
+
+          {taskStatusData.length ? (
+            <div className="dashboard-page__task-layout">
+              <div className="dashboard-page__donut-shell">
+                <div className="dashboard-page__donut-center">
+                  <span>{taskTotal}</span>
+                  <small>Total tasks</small>
+                </div>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Tooltip contentStyle={chartTooltipStyle()} />
+                    <Pie
+                      data={taskStatusData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={56}
+                      outerRadius={84}
+                      paddingAngle={3}
+                    >
+                      {taskStatusData.map((item) => (
+                        <Cell key={item.name} fill={item.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="dashboard-page__legend-list">
+                {taskStatusData.map((item) => (
+                  <div key={item.name} className="dashboard-page__legend-item">
+                    <div className="dashboard-page__legend-label">
+                      <span className="dashboard-page__legend-dot" style={{ background: item.color }} />
+                      {item.name}
+                    </div>
+                    <div className="dashboard-page__legend-value">{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <EmptyChartState
+              title="No task data yet"
+              description="Tasks will appear here after MailMind extracts action items from synced emails."
+            />
+          )}
+        </section>
+
+        <section className="dashboard-page__card">
+          <div className="dashboard-page__card-head">
+            <div>
+              <div className="dashboard-page__card-title">Inbox activity</div>
+              <div className="dashboard-page__card-copy">Follow how much synced activity is appearing through the week.</div>
+            </div>
+            {activityPeak ? (
+              <div className="dashboard-page__mini-stat">
+                <span className="dashboard-page__mini-label">Busiest day</span>
+                <span className="dashboard-page__mini-value">{activityPeak.name}</span>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="dashboard-page__chart-frame">
+            {activityData.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={activityData}>
+                  <defs>
+                    <linearGradient id="dashboard-activity-fill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.28} />
+                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="4 4" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                    tickLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <YAxis
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                    tickLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <Tooltip contentStyle={chartTooltipStyle()} />
+                  <Area
+                    type="monotone"
+                    dataKey="emails"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={3}
+                    fill="url(#dashboard-activity-fill)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChartState
+                title="No inbox activity yet"
+                description="Once Gmail is synced, MailMind will chart how your email activity flows through the week."
+              />
+            )}
+          </div>
+        </section>
+
+        <section className="dashboard-page__card">
+          <div className="dashboard-page__card-head">
+            <div>
+              <div className="dashboard-page__card-title">Intent mix</div>
+              <div className="dashboard-page__card-copy">See which email intent types are appearing most often.</div>
+            </div>
+            {dominantIntent ? (
+              <div className="dashboard-page__mini-stat">
+                <span className="dashboard-page__mini-label">Top intent</span>
+                <span className="dashboard-page__mini-value">{dominantIntent.name}</span>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="dashboard-page__chart-frame">
+            {intentData.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={intentData} layout="vertical" margin={{ left: 16, right: 8 }}>
+                  <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="4 4" horizontal={false} />
+                  <XAxis
+                    type="number"
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                    tickLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={92}
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                    tickLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <Tooltip contentStyle={chartTooltipStyle()} />
+                  <Bar dataKey="value" fill="hsl(var(--secondary))" radius={[0, 10, 10, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChartState
+                title="No intent data yet"
+                description="Run MailMind analysis to see how your inbox is distributed across intent types."
+              />
+            )}
+          </div>
+        </section>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <div className="rounded-xl border border-border bg-card p-5 shadow-card">
-          <div className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <Users className="h-4 w-4 text-primary" />
-            Most Active Contacts
+      <div className="dashboard-page__detail-grid">
+        <section className="dashboard-page__card">
+          <div className="dashboard-page__card-head">
+            <div>
+              <div className="dashboard-page__card-title">Project load</div>
+              <div className="dashboard-page__card-copy">Compare the project groups currently taking the most inbox volume.</div>
+            </div>
+            <div className="dashboard-page__badge">
+              <BarChart3 className="h-4 w-4" />
+              Project view
+            </div>
           </div>
-          <div className="mt-4 space-y-3">
-            {contacts.length ? (
-              contacts.map((contact) => (
-                <div key={contact.name} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar initials={contact.initials} className="h-8 w-8" />
-                    <div>
-                      <div className="text-sm font-medium text-card-foreground">{contact.name}</div>
-                      <div className="text-xs text-muted-foreground">Frequent collaboration</div>
+
+          <div className="dashboard-page__list">
+            {projects.length ? (
+              projects.map((project) => {
+                const width = `${Math.max((Number(project.count || 0) / maxProjectCount) * 100, 12)}%`;
+
+                return (
+                  <div key={project.name} className="dashboard-page__metric-row">
+                    <div className="dashboard-page__metric-head">
+                      <span>{project.name}</span>
+                      <span>{project.count}</span>
+                    </div>
+                    <div className="dashboard-page__progress">
+                      <div className="dashboard-page__progress-bar" style={{ width }} />
                     </div>
                   </div>
-                  <div className="text-sm font-semibold text-card-foreground">{contact.count}</div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <div className="rounded-lg bg-muted/50 px-3 py-3 text-sm text-muted-foreground">
-                Sync and analyze emails to see contact activity.
-              </div>
+              <EmptyChartState
+                title="No project groups yet"
+                description="Project-based grouping appears here after MailMind processes your synced emails."
+              />
             )}
           </div>
-        </div>
+        </section>
 
-        <div className="rounded-xl border border-border bg-card p-5 shadow-card">
-          <div className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <Sparkles className="h-4 w-4 text-secondary" />
-            Recent AI Insights
+        <section className="dashboard-page__card">
+          <div className="dashboard-page__card-head">
+            <div>
+              <div className="dashboard-page__card-title">Most active contacts</div>
+              <div className="dashboard-page__card-copy">See which contacts are contributing most to your synced workload.</div>
+            </div>
+            <div className="dashboard-page__badge">
+              <Users className="h-4 w-4" />
+              Contact activity
+            </div>
           </div>
-          <div className="mt-4 space-y-3">
+
+          <div className="dashboard-page__list">
+            {contacts.length ? (
+              contacts.map((contact, index) => {
+                const width = `${Math.max((Number(contact.count || 0) / maxContactCount) * 100, 16)}%`;
+
+                return (
+                  <div key={contact.name} className="dashboard-page__contact-row">
+                    <div className="dashboard-page__contact-meta">
+                      <div className="dashboard-page__contact-rank">{index + 1}</div>
+                      <Avatar initials={contact.initials} className="h-9 w-9" />
+                      <div>
+                        <div className="dashboard-page__contact-name">{contact.name}</div>
+                        <div className="dashboard-page__contact-subtle">{contact.count} related emails</div>
+                      </div>
+                    </div>
+                    <div className="dashboard-page__contact-bar">
+                      <div className="dashboard-page__contact-fill" style={{ width }} />
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <EmptyChartState
+                title="No contact activity yet"
+                description="Contact rankings will appear after MailMind has enough synced inbox data to compare."
+              />
+            )}
+          </div>
+        </section>
+
+        <section className="dashboard-page__card">
+          <div className="dashboard-page__card-head">
+            <div>
+              <div className="dashboard-page__card-title">MailMind insights</div>
+              <div className="dashboard-page__card-copy">A quick summary of what needs attention inside the workspace.</div>
+            </div>
+            <div className="dashboard-page__badge">
+              <Sparkles className="h-4 w-4" />
+              Live signals
+            </div>
+          </div>
+
+          <div className="dashboard-page__insights">
             {insights.length ? (
               insights.map((insight) => (
-                <div key={insight.title} className="rounded-lg bg-muted/50 p-3">
-                  <div className="text-sm font-medium text-card-foreground">{insight.title}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">{insight.description}</div>
+                <div key={insight.title} className="dashboard-page__insight">
+                  <div className="dashboard-page__insight-title">{insight.title}</div>
+                  <div className="dashboard-page__insight-copy">{insight.description}</div>
                 </div>
               ))
             ) : (
-              <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
-                AI insights will appear after inbox analysis.
-              </div>
+              <EmptyChartState
+                title="No insights yet"
+                description="Run AI analysis after syncing Gmail to fill this panel with MailMind recommendations."
+              />
             )}
           </div>
-        </div>
 
-        <div className="space-y-4">
-          <div className="rounded-xl border border-border bg-card p-5 shadow-card">
-            <div className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-              <BarChart3 className="h-4 w-4 text-success" />
-              Top Projects
-            </div>
-            <div className="mt-4 space-y-3">
-              {projects.length ? (
-                projects.map((project) => (
-                  <div key={project.name} className="rounded-lg bg-muted/50 px-3 py-3 text-sm">
-                    <div className="font-medium text-card-foreground">{project.name}</div>
-                    <div className="mt-1 text-muted-foreground">{project.count} related emails</div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-lg bg-muted/50 px-3 py-3 text-sm text-muted-foreground">
-                  Project groups appear after MailMind classifies the inbox.
+          <div className="dashboard-page__queue">
+            {attentionQueue.length ? (
+              attentionQueue.map((item) => (
+                <div key={item} className="dashboard-page__queue-item">
+                  <ArrowRight className="h-4 w-4" />
+                  <span>{item}</span>
                 </div>
-              )}
-            </div>
+              ))
+            ) : (
+              <div className="dashboard-page__queue-empty">No urgent follow-up items right now.</div>
+            )}
           </div>
-          <NotificationPanel title="Attention Queue" items={notifications} />
-        </div>
+        </section>
       </div>
     </div>
   );

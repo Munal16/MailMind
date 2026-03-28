@@ -1,0 +1,516 @@
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-page__hero,
+.admin-page__section,
+.admin-page__stat-card,
+.admin-page__message {
+  border: 1px solid hsl(var(--border));
+  border-radius: 1.5rem;
+  background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.96) 100%);
+  box-shadow: 0 18px 42px hsl(var(--foreground) / 0.06);
+}
+
+.admin-page__hero {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.6rem;
+  overflow: hidden;
+}
+
+.admin-page__hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -4rem -5rem auto;
+  width: 14rem;
+  height: 14rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, hsl(var(--primary) / 0.15), transparent 68%);
+  pointer-events: none;
+}
+
+.admin-page__eyebrow {
+  color: hsl(var(--primary));
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.admin-page__title {
+  margin-top: 0.5rem;
+  color: hsl(var(--foreground));
+  font-size: clamp(2.2rem, 4vw, 3.25rem);
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+}
+
+.admin-page__description {
+  margin-top: 0.85rem;
+  max-width: 52rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 1rem;
+  line-height: 1.78;
+}
+
+.admin-page__hero-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-page__message {
+  padding: 0.95rem 1.05rem;
+  color: hsl(var(--card-foreground));
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.admin-page__message--error {
+  border-color: hsl(var(--destructive) / 0.25);
+  background: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+}
+
+.admin-page__stats {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-page__stat-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.2rem 1.25rem;
+}
+
+.admin-page__stat-icon {
+  display: inline-flex;
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+}
+
+.admin-page__stat-label {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-page__stat-value {
+  margin-top: 0.45rem;
+  color: hsl(var(--card-foreground));
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.admin-page__stat-note {
+  margin-top: 0.5rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.admin-page__two-column {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.admin-page__two-column--balanced {
+  grid-template-columns: minmax(0, 1.2fr) minmax(22rem, 0.8fr);
+}
+
+.admin-page__section {
+  display: grid;
+  gap: 1rem;
+  padding: 1.3rem;
+  align-self: start;
+}
+
+.admin-page__section--spotlight {
+  background:
+    radial-gradient(circle at top right, hsl(var(--primary) / 0.08), transparent 28%),
+    linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.96) 100%);
+}
+
+.admin-page__section-headline,
+.admin-page__health-head,
+.admin-page__alert-head,
+.admin-page__user-head,
+.admin-page__directory-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.admin-page__section-title {
+  color: hsl(var(--card-foreground));
+  font-size: 1.08rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.admin-page__section-copy {
+  margin-top: 0.34rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.9rem;
+  line-height: 1.68;
+}
+
+.admin-page__pill,
+.admin-page__status-pill,
+.admin-page__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-page__pill {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.admin-page__status-pill--ok {
+  background: hsl(var(--success) / 0.12);
+  color: hsl(var(--success));
+}
+
+.admin-page__status-pill--warn {
+  background: hsl(var(--warning) / 0.14);
+  color: hsl(var(--warning));
+}
+
+.admin-page__status-pill--owner {
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+}
+
+.admin-page__status-pill--neutral {
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.admin-page__user-toolbar {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.6fr) minmax(12rem, 14rem);
+}
+
+.admin-page__search {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  height: 3rem;
+  border: 1px solid hsl(var(--input));
+  border-radius: 1rem;
+  background: hsl(var(--background));
+  padding: 0 0.95rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.admin-page__search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-size: 0.95rem;
+}
+
+.admin-page__search input::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.admin-page__directory-summary {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.admin-page__select-field {
+  display: grid;
+  gap: 0.36rem;
+}
+
+.admin-page__select-field span {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-page__select-field select {
+  height: 3rem;
+  border: 1px solid hsl(var(--input));
+  border-radius: 1rem;
+  background: hsl(var(--background));
+  padding: 0 0.95rem;
+  color: hsl(var(--foreground));
+  font-size: 0.92rem;
+  outline: 0;
+}
+
+.admin-page__user-directory,
+.admin-page__health-grid,
+.admin-page__model-grid,
+.admin-page__alerts,
+.admin-page__activity-list,
+.admin-page__user-list,
+.admin-page__chart-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.admin-page__directory-card,
+.admin-page__health-card,
+.admin-page__alert-card,
+.admin-page__activity-card,
+.admin-page__user-card,
+.admin-page__model-card {
+  border: 1px solid hsl(var(--border));
+  border-radius: 1.1rem;
+  padding: 1rem;
+  background: hsl(var(--background) / 0.72);
+}
+
+.admin-page__directory-name,
+.admin-page__health-label,
+.admin-page__alert-title,
+.admin-page__user-name,
+.admin-page__model-label {
+  color: hsl(var(--card-foreground));
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.admin-page__directory-email,
+.admin-page__health-details,
+.admin-page__alert-copy,
+.admin-page__user-copy,
+.admin-page__activity-copy,
+.admin-page__model-copy,
+.admin-page__model-path {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.admin-page__directory-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.admin-page__directory-meta {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 0.9rem;
+}
+
+.admin-page__directory-metric {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.9rem;
+  background: hsl(var(--muted) / 0.34);
+}
+
+.admin-page__directory-metric span {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-page__directory-metric strong {
+  color: hsl(var(--card-foreground));
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.admin-page__directory-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.9rem;
+}
+
+.admin-page__directory-note {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.admin-page__health-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-page__kpi-band {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-page__kpi-pill {
+  border-radius: 1rem;
+  padding: 0.95rem 1rem;
+  background: hsl(var(--muted) / 0.36);
+  border: 1px solid hsl(var(--border));
+}
+
+.admin-page__kpi-pill-label {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-page__kpi-pill-value {
+  margin-top: 0.45rem;
+  color: hsl(var(--card-foreground));
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.admin-page__chart-row {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  align-items: center;
+}
+
+.admin-page__chart-label {
+  color: hsl(var(--card-foreground));
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.admin-page__chart-bars {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.admin-page__chart-bar {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: 5.3rem minmax(0, 1fr) 2.2rem;
+  align-items: center;
+}
+
+.admin-page__chart-bar-name,
+.admin-page__chart-bar-value {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.78rem;
+}
+
+.admin-page__chart-track {
+  height: 0.55rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+}
+
+.admin-page__chart-fill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.admin-page__chart-fill--signups {
+  background: linear-gradient(90deg, #4f67ff, #7c5cff);
+}
+
+.admin-page__chart-fill--connections {
+  background: linear-gradient(90deg, #00b894, #00d2a5);
+}
+
+.admin-page__chart-fill--syncs {
+  background: linear-gradient(90deg, #f59e0b, #ffbf47);
+}
+
+.admin-page__chart-fill--analyses {
+  background: linear-gradient(90deg, #ec4899, #f472b6);
+}
+
+.admin-page__empty {
+  border-radius: 1rem;
+  border: 1px dashed hsl(var(--border));
+  padding: 1rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.92rem;
+  background: hsl(var(--muted) / 0.22);
+}
+
+@media (max-width: 1280px) {
+  .admin-page__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-page__two-column,
+  .admin-page__two-column--balanced {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-page__health-grid,
+  .admin-page__kpi-band,
+  .admin-page__directory-meta,
+  .admin-page__user-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-page__hero,
+  .admin-page__section-headline,
+  .admin-page__directory-head,
+  .admin-page__health-head,
+  .admin-page__alert-head,
+  .admin-page__user-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-page__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page__directory-badges,
+  .admin-page__directory-actions {
+    justify-content: flex-start;
+  }
+
+  .admin-page__chart-row {
+    grid-template-columns: 1fr;
+  }
+}

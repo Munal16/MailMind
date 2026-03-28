@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2, Mail } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  ArrowRight,
+  CheckCircle2,
+  House,
+  Inbox,
+  Loader2,
+  Mail,
+  ShieldCheck,
+} from "lucide-react";
 import api from "../api/client";
 import { Button } from "../components/ui/button";
 import BrandLogo from "../components/BrandLogo";
+import "./ConnectEmail.css";
 
 function getErrorMessage(err) {
   if (typeof err?.response?.data === "string") {
@@ -23,6 +32,7 @@ export default function ConnectEmail() {
   const [completed, setCompleted] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [gmailConnected, setGmailConnected] = useState(false);
+  const [connectedEmail, setConnectedEmail] = useState("");
   const [loadingStatus, setLoadingStatus] = useState(true);
   const autoSyncStarted = useRef(false);
 
@@ -32,6 +42,50 @@ export default function ConnectEmail() {
       { number: 2, label: "Sync", active: step >= 2 },
     ],
     [step]
+  );
+
+  const statusVariant = useMemo(() => {
+    const normalized = status.toLowerCase();
+
+    if (!status) {
+      return "info";
+    }
+
+    if (
+      normalized.includes("error") ||
+      normalized.includes("failed") ||
+      normalized.includes("reconnect") ||
+      normalized.includes("not connected")
+    ) {
+      return "error";
+    }
+
+    if (completed || normalized.includes("synced") || normalized.includes("connected successfully")) {
+      return "success";
+    }
+
+    return "info";
+  }, [completed, status]);
+
+  const benefitItems = useMemo(
+    () => [
+      {
+        icon: ShieldCheck,
+        title: "Secure Gmail access",
+        description: "Connect safely with Google OAuth.",
+      },
+      {
+        icon: Mail,
+        title: "Focused sync flow",
+        description: "Bring recent emails into MailMind.",
+      },
+      {
+        icon: Inbox,
+        title: "AI-ready workspace",
+        description: "Your inbox is ready for review after sync.",
+      },
+    ],
+    []
   );
 
   const handleUnauthorized = useCallback(() => {
@@ -50,13 +104,13 @@ export default function ConnectEmail() {
     setStatus("Fetching emails...");
 
     try {
-      const syncRes = await api.post("/api/gmail/sync/", { max_results: 50 });
+      const syncRes = await api.post("/api/gmail/sync/", { max_results: 120 });
       const syncedCount = Number(syncRes.data.saved || 0) + Number(syncRes.data.updated || 0);
 
       setStatus(`Synced ${syncedCount} emails. Running AI analysis...`);
 
       try {
-        const analysisRes = await api.post("/api/ai/analyze-latest/", { limit: 50 });
+        const analysisRes = await api.post("/api/ai/analyze-latest/", { limit: 80 });
         setStatus(`Synced ${syncedCount} emails and analyzed ${analysisRes.data.analyzed || 0} emails.`);
       } catch {
         setStatus(`Synced ${syncedCount} emails. AI analysis can be run again from Inbox or Dashboard.`);
@@ -71,6 +125,7 @@ export default function ConnectEmail() {
 
       if (err.response?.data?.requires_reconnect) {
         setGmailConnected(false);
+        setConnectedEmail("");
         setStep(1);
         setCompleted(false);
         autoSyncStarted.current = false;
@@ -87,20 +142,41 @@ export default function ConnectEmail() {
       try {
         const res = await api.get("/api/gmail/status/");
         const connected = Boolean(res.data?.connected);
+        const backendMessage = res.data?.message;
+        const connectedMailbox = res.data?.email_address || "";
 
         const gmailError = params.get("gmail");
         const gmailMessage = params.get("message");
 
         if (gmailError === "error") {
           setGmailConnected(false);
+          setConnectedEmail("");
           setStep(1);
           setStatus(gmailMessage || "Gmail connection failed. Please connect Gmail again.");
           return;
         }
 
+        if (params.get("gmail") === "connected" && !connected) {
+          setGmailConnected(false);
+          setConnectedEmail("");
+          setStep(1);
+          setStatus(
+            backendMessage ||
+              "MailMind could not verify a Gmail connection for this account. Please reconnect Gmail and try again."
+          );
+          return;
+        }
+
         setGmailConnected(connected);
+        setConnectedEmail(connectedMailbox);
         setStep(connected ? 2 : 1);
-        setStatus(connected ? "Gmail connected successfully. You can sync emails now." : "");
+        setStatus(
+          connected
+            ? connectedMailbox
+              ? `Gmail connected successfully for ${connectedMailbox}. You can sync emails now.`
+              : backendMessage || "Gmail connected successfully. You can sync emails now."
+            : backendMessage || ""
+        );
       } catch (err) {
         if (err.response?.status === 401) {
           handleUnauthorized();
@@ -142,96 +218,172 @@ export default function ConnectEmail() {
     }
   };
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
-      <div className="w-full max-w-2xl">
-        <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
-          <div className="mb-8 flex justify-center">
-            <BrandLogo size="md" className="justify-center" />
+  const renderActionPanel = () => {
+    if (!gmailConnected) {
+      return (
+        <>
+          <div className="connect-email-page__state-icon">
+            <Mail className="h-8 w-8" />
           </div>
-          <div className="mx-auto mb-10 flex max-w-md items-center justify-center gap-4">
-            {steps.map((item, index) => (
-              <div key={item.number} className="flex items-center gap-4">
-                <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
-                    item.active ? "gradient-primary text-white" : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {item.number}
-                </div>
-                <div className="text-sm font-medium text-muted-foreground">{item.label}</div>
-                {index < steps.length - 1 ? <div className="h-px w-14 bg-border" /> : null}
-              </div>
-            ))}
+          <h2 className="connect-email-page__state-title">Connect your Gmail</h2>
+          <p className="connect-email-page__state-description">
+            {loadingStatus
+              ? "Checking whether your Gmail account is already connected."
+              : "Connect Gmail with Google OAuth so MailMind can sync your latest emails into one organized workspace."}
+          </p>
+          <div className="connect-email-page__actions">
+            <Button variant="hero" onClick={connectGmail} disabled={loadingStatus}>
+              Connect Gmail
+            </Button>
           </div>
+        </>
+      );
+    }
 
-          {!gmailConnected ? (
-            <div className="mx-auto max-w-xl text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-accent text-accent-foreground">
-                <Mail className="h-8 w-8" />
-              </div>
-              <h1 className="mt-6 text-3xl font-bold tracking-tight text-foreground">Connect your Gmail</h1>
-              <p className="mt-3 text-sm text-muted-foreground">
-                {loadingStatus
-                  ? "Checking your Gmail connection..."
-                  : "Connect Gmail via OAuth to start syncing your inbox into MailMind."}
-              </p>
-              <div className="mt-8 flex items-center justify-center gap-3">
-                <Button variant="hero" onClick={connectGmail} disabled={loadingStatus}>
-                  Connect Gmail
-                </Button>
-              </div>
-            </div>
-          ) : syncing ? (
-            <div className="text-center">
-              <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-              <h2 className="mt-6 text-2xl font-semibold text-foreground">Fetching emails...</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                MailMind is syncing your inbox and running AI analysis.
-              </p>
-            </div>
-          ) : completed ? (
-            <div className="text-center">
-              <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
-              <h2 className="mt-6 text-2xl font-semibold text-foreground">All Set!</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Your mailbox is connected, synced, and ready inside MailMind.
-              </p>
-              <div className="mt-8 flex items-center justify-center gap-3">
-                <Button variant="hero" onClick={() => navigate("/app/inbox")}>
-                  Open Inbox
-                </Button>
-                <Button variant="outline" onClick={() => navigate("/app/dashboard")}>
-                  Go to Dashboard
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="mx-auto max-w-xl text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-accent text-accent-foreground">
-                <CheckCircle2 className="h-8 w-8" />
-              </div>
-              <h1 className="mt-6 text-3xl font-bold tracking-tight text-foreground">Gmail connected</h1>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Your Gmail account is linked. Sync now to pull the latest emails into MailMind.
-              </p>
-              <div className="mt-8 flex items-center justify-center gap-3">
-                <Button variant="hero" onClick={handleSync}>
-                  Sync Emails Now
-                </Button>
-                <Button variant="outline" onClick={() => navigate("/app/dashboard")}>
-                  Skip for now
-                </Button>
-              </div>
-            </div>
-          )}
+    if (syncing) {
+      return (
+        <>
+          <div className="connect-email-page__state-icon connect-email-page__state-icon--loading">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+          <h2 className="connect-email-page__state-title">Syncing your mailbox</h2>
+          <p className="connect-email-page__state-description">
+            MailMind is importing recent emails and preparing them for urgency analysis, tasks, and attachment review.
+          </p>
+          {connectedEmail ? <div className="connect-email-page__account-chip">{connectedEmail}</div> : null}
+        </>
+      );
+    }
 
-          {status ? (
-            <div className="mt-8 rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-              {status}
-            </div>
-          ) : null}
+    if (completed) {
+      return (
+        <>
+          <div className="connect-email-page__state-icon connect-email-page__state-icon--success">
+            <CheckCircle2 className="h-8 w-8" />
+          </div>
+          <h2 className="connect-email-page__state-title">Mailbox ready</h2>
+          <p className="connect-email-page__state-description">
+            Your Gmail account is connected and synced. You can go straight into Inbox or continue from Dashboard.
+          </p>
+          {connectedEmail ? <div className="connect-email-page__account-chip">{connectedEmail}</div> : null}
+          <div className="connect-email-page__actions">
+            <Button variant="hero" onClick={() => navigate("/app/inbox")}>
+              Open Inbox
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/app/dashboard")}>
+              Go to Dashboard
+            </Button>
+          </div>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <div className="connect-email-page__state-icon connect-email-page__state-icon--success">
+          <CheckCircle2 className="h-8 w-8" />
         </div>
+        <h2 className="connect-email-page__state-title">Gmail connected</h2>
+        <p className="connect-email-page__state-description">
+          {connectedEmail
+            ? `Your account ${connectedEmail} is linked. Start a sync to pull the latest emails into MailMind.`
+            : "Your Gmail account is linked. Start a sync to pull the latest emails into MailMind."}
+        </p>
+        {connectedEmail ? <div className="connect-email-page__account-chip">{connectedEmail}</div> : null}
+        <div className="connect-email-page__actions">
+          <Button variant="hero" onClick={handleSync}>
+            Sync Emails Now
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/app/dashboard")}>
+            Skip for now
+          </Button>
+        </div>
+      </>
+    );
+  };
+
+  return (
+    <div className="connect-email-page">
+      <div className="connect-email-page__glow connect-email-page__glow--primary" />
+      <div className="connect-email-page__glow connect-email-page__glow--secondary" />
+
+      <div className="connect-email-page__container">
+        <div className="connect-email-page__intro">
+          <Link to="/" className="connect-email-page__backlink">
+            <House className="h-4 w-4" />
+            Back to home
+          </Link>
+
+          <div className="connect-email-page__header">
+            <div className="connect-email-page__eyebrow">Connect email</div>
+            <h1 className="connect-email-page__title">Bring your Gmail into MailMind</h1>
+            <p className="connect-email-page__description">Connect Gmail so MailMind can sync your emails.</p>
+            <p className="connect-email-page__helper-note">Google may ask you to choose an account here.</p>
+          </div>
+        </div>
+
+        <section className="connect-email-page__shell">
+          <aside className="connect-email-page__aside">
+            <div className="connect-email-page__brand">
+              <BrandLogo size="md" className="justify-start" />
+            </div>
+
+            <div className="connect-email-page__aside-copy">
+              <h3>What happens next</h3>
+              <p>Connect Gmail, sync your inbox, and start working.</p>
+            </div>
+
+            <ul className="connect-email-page__benefits">
+              {benefitItems.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <li key={item.title} className="connect-email-page__benefit">
+                    <div className="connect-email-page__benefit-icon">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="connect-email-page__benefit-copy">
+                      <h4>{item.title}</h4>
+                      <p>{item.description}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </aside>
+
+          <div className="connect-email-page__panel">
+            <div className="connect-email-page__steps">
+              {steps.map((item, index) => (
+                <div key={item.number} className="connect-email-page__step">
+                  <div
+                    className={`connect-email-page__step-badge ${item.active ? "connect-email-page__step-badge--active" : ""}`}
+                  >
+                    {item.number}
+                  </div>
+                  <div className="connect-email-page__step-label">{item.label}</div>
+                  {index < steps.length - 1 ? <div className="connect-email-page__step-line" /> : null}
+                </div>
+              ))}
+            </div>
+
+            <div className="connect-email-page__state-card">{renderActionPanel()}</div>
+
+            {status ? (
+              <div className={`connect-email-page__status connect-email-page__status--${statusVariant}`}>
+                <div className="connect-email-page__status-label">Status</div>
+                <div className="connect-email-page__status-text">{status}</div>
+              </div>
+            ) : null}
+
+            <div className="connect-email-page__footer-link">
+              <button type="button" onClick={() => navigate("/app/dashboard")}>
+                Continue to dashboard
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

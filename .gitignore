@@ -22,3 +22,7 @@ frontend/node_modules/
 frontend/dist/
 frontend/.env
 frontend/.env.production
+
+# Local datasets / extracts
+clean_enron_emails_sample.csv
+tmp_report_extract/

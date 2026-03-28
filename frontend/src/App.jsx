@@ -1,6 +1,7 @@
 ﻿import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import RequireAuth from "./components/RequireAuth";
+import RequireAdmin from "./components/RequireAdmin";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -14,6 +15,7 @@ import AttachmentsPage from "./pages/AttachmentsPage";
 import ContextualSearch from "./pages/ContextualSearch";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import Settings from "./pages/Settings";
+import AdminPanel from "./pages/AdminPanel";
 
 export default function App() {
   return (
@@ -49,6 +51,14 @@ export default function App() {
           <Route path="search" element={<ContextualSearch />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="settings" element={<Settings />} />
+          <Route
+            path="admin"
+            element={
+              <RequireAdmin>
+                <AdminPanel />
+              </RequireAdmin>
+            }
+          />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

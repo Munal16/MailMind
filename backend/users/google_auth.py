@@ -14,8 +14,6 @@ def google_login_url(request):
     flow = _get_flow(scopes=LOGIN_SCOPES, state=state)
 
     auth_url, _ = flow.authorization_url(
-        access_type="offline",
-        include_granted_scopes="true",
         prompt="select_account",
     )
     return Response({"authorization_url": auth_url})
