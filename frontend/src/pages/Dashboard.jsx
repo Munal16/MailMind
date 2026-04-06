@@ -69,6 +69,7 @@ function chartTooltipStyle() {
 
 export default function Dashboard() {
   const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -79,6 +80,8 @@ export default function Dashboard() {
       setError("");
       if (showFeedback) {
         setRefreshing(true);
+      } else {
+        setLoading(true);
       }
       const res = await api.get("/api/ai/summary/");
       setSummary(res.data);
@@ -90,6 +93,7 @@ export default function Dashboard() {
       setError(formatDashboardError(err));
       setNotice("");
     } finally {
+      setLoading(false);
       if (showFeedback) {
         setRefreshing(false);
       }
@@ -160,15 +164,14 @@ export default function Dashboard() {
   const projects = useMemo(() => summary?.top_projects || [], [summary]);
   const insights = useMemo(() => summary?.recent_insights || [], [summary]);
 
-  const taskStatusData = useMemo(
-    () =>
-      Object.entries(summary?.task_status_distribution || {}).map(([name, value]) => ({
-        name,
-        value,
-        color: TASK_STATUS_COLORS[name] || "hsl(var(--secondary))",
-      })),
-    [summary]
-  );
+  const taskStatusData = useMemo(() => {
+    const dist = summary?.task_status_distribution || {};
+    return ["Pending", "In Progress", "Completed"].map((name) => ({
+      name,
+      value: Number(dist[name] || 0),
+      color: TASK_STATUS_COLORS[name] || "hsl(var(--secondary))",
+    }));
+  }, [summary]);
 
   const taskTotal = useMemo(
     () => taskStatusData.reduce((sum, item) => sum + Number(item.value || 0), 0),
@@ -209,6 +212,29 @@ export default function Dashboard() {
 
   const maxProjectCount = Math.max(...projects.map((project) => Number(project.count || 0)), 1);
   const maxContactCount = Math.max(...contacts.map((contact) => Number(contact.count || 0)), 1);
+
+  if (loading) {
+    return (
+      <div className="dashboard-page">
+        <div className="dashboard-page__hero">
+          <div>
+            <div className="dashboard-page__eyebrow">Workspace overview</div>
+            <h1 className="dashboard-page__title">Dashboard</h1>
+          </div>
+        </div>
+        <div className="dashboard-page__loading-grid">
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n} className="dashboard-page__skeleton dashboard-page__skeleton--widget" />
+          ))}
+        </div>
+        <div className="dashboard-page__loading-grid dashboard-page__loading-grid--charts">
+          {[1, 2, 3, 4].map((n) => (
+            <div key={n} className="dashboard-page__skeleton dashboard-page__skeleton--chart" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-page">
@@ -283,9 +309,9 @@ export default function Dashboard() {
                     tickLine={{ stroke: "hsl(var(--border))" }}
                   />
                   <Tooltip contentStyle={chartTooltipStyle()} />
+                  <Bar dataKey="low" name="Low" stackId="urgency" fill="hsl(var(--success))" radius={0} />
+                  <Bar dataKey="medium" name="Medium" stackId="urgency" fill="hsl(var(--warning))" radius={0} />
                   <Bar dataKey="high" name="High" stackId="urgency" fill="hsl(var(--urgent))" radius={[8, 8, 0, 0]} />
-                  <Bar dataKey="medium" name="Medium" stackId="urgency" fill="hsl(var(--warning))" radius={[8, 8, 0, 0]} />
-                  <Bar dataKey="low" name="Low" stackId="urgency" fill="hsl(var(--success))" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -305,7 +331,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {taskStatusData.length ? (
+          {taskTotal > 0 ? (
             <div className="dashboard-page__task-layout">
               <div className="dashboard-page__donut-shell">
                 <div className="dashboard-page__donut-center">
@@ -316,14 +342,14 @@ export default function Dashboard() {
                   <PieChart>
                     <Tooltip contentStyle={chartTooltipStyle()} />
                     <Pie
-                      data={taskStatusData}
+                      data={taskStatusData.filter((item) => item.value > 0)}
                       dataKey="value"
                       nameKey="name"
                       innerRadius={56}
                       outerRadius={84}
                       paddingAngle={3}
                     >
-                      {taskStatusData.map((item) => (
+                      {taskStatusData.filter((item) => item.value > 0).map((item) => (
                         <Cell key={item.name} fill={item.color} />
                       ))}
                     </Pie>

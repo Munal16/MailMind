@@ -1,7 +1,10 @@
 import re
 from datetime import datetime, timedelta
+from difflib import SequenceMatcher
 
 from django.utils import timezone
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
 
 from ai.utils.text_preprocessing import normalize_text
 from emails.gmail_service import GmailAuthError, get_gmail_service
@@ -25,12 +28,25 @@ STOPWORDS = {
     "mail",
     "please",
     "with",
+    "without",
+    "by",
+    "from",
+    "sent",
+    "attached",
     "about",
     "related",
     "for",
     "of",
     "in",
 }
+
+NEGATIVE_ATTACHMENT_PATTERNS = [
+    re.compile(r"\bwithout\s+(?:any\s+)?(?:attachments?|files?|documents?|images?|photos?|pdfs?|docs?)\b", re.IGNORECASE),
+    re.compile(r"\bno\s+(?:attachments?|files?|documents?|images?|photos?|pdfs?|docs?)\b", re.IGNORECASE),
+    re.compile(r"\b(?:excluding|exclude)\s+(?:attachments?|files?|documents?|images?|photos?|pdfs?|docs?)\b", re.IGNORECASE),
+    re.compile(r"\b(?:don'?t|do not|doesn'?t|does not|didn'?t|did not)\s+have\s+(?:any\s+)?(?:attachments?|files?|documents?|images?|photos?|pdfs?|docs?)\b", re.IGNORECASE),
+    re.compile(r"\b(?:lacking|lack|lacks|missing)\s+(?:attachments?|files?|documents?|images?|photos?|pdfs?|docs?)\b", re.IGNORECASE),
+]
 
 INTENT_HINTS = {
     "verification": "Verification",
@@ -50,19 +66,21 @@ INTENT_HINTS = {
     "spam": "Spam",
 }
 
-MAILBOX_HINTS = {
-    "unread": "unread",
-    "starred": "starred",
-    "sent": "sent",
-    "draft": "drafts",
-    "drafts": "drafts",
-    "archive": "archive",
-    "archived": "archive",
-    "trash": "trash",
-    "deleted": "trash",
-    "priority": "priority",
-    "urgent": "priority",
-}
+MAILBOX_HINT_PATTERNS = [
+    (re.compile(r"\bunread\b", re.IGNORECASE), "unread"),
+    (re.compile(r"\bstarred\b", re.IGNORECASE), "starred"),
+    (
+        re.compile(
+            r"\b(?:sent\s+(?:emails?|mail|messages?|folder|mailbox)|(?:emails?|mail|messages?)\s+sent(?!\s+by\b))\b",
+            re.IGNORECASE,
+        ),
+        "sent",
+    ),
+    (re.compile(r"\bdrafts?\b", re.IGNORECASE), "drafts"),
+    (re.compile(r"\barchiv(?:e|ed)\b", re.IGNORECASE), "archive"),
+    (re.compile(r"\b(?:trash|deleted)\b", re.IGNORECASE), "trash"),
+    (re.compile(r"\b(?:priority|urgent)\b", re.IGNORECASE), "priority"),
+]
 
 ATTACHMENT_TYPE_HINTS = {
     "image": {"image", "images", "photo", "photos", "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"},
@@ -74,6 +92,26 @@ ATTACHMENT_TYPE_HINTS = {
     "archive": {"zip", "rar", "7z", "archive"},
     "audio": {"audio", "mp3", "wav", "m4a"},
     "video": {"video", "mp4", "mov", "avi", "mkv"},
+}
+
+ATTACHMENT_QUERY_TOKENS = {
+    "attachment",
+    "attachments",
+    "file",
+    "files",
+    "document",
+    "documents",
+    "image",
+    "images",
+    "photo",
+    "photos",
+    "attached",
+    "attachmentless",
+    "pdf",
+    "pdfs",
+    "doc",
+    "docs",
+    "docx",
 }
 
 SENDER_PATTERNS = [
@@ -174,10 +212,69 @@ def _detect_attachment_type(text: str):
 
 
 def _detect_mailbox(text: str):
-    for keyword, mailbox in MAILBOX_HINTS.items():
-        if re.search(rf"\b{re.escape(keyword)}\b", text):
+    for pattern, mailbox in MAILBOX_HINT_PATTERNS:
+        if pattern.search(text):
             return mailbox
     return None
+
+
+def _detect_attachment_constraint(text: str):
+    if any(pattern.search(text) for pattern in NEGATIVE_ATTACHMENT_PATTERNS):
+        return "without"
+
+    positive_patterns = [
+        re.compile(r"\bwith\s+(?:any\s+)?(?:attachments?|files?|documents?|images?|photos?|pdfs?|docs?)\b", re.IGNORECASE),
+        re.compile(r"\b(?:has|having|include|includes|including|contains|containing)\s+(?:any\s+)?(?:attachments?|files?|documents?|images?|photos?|pdfs?|docs?)\b", re.IGNORECASE),
+    ]
+    if any(pattern.search(text) for pattern in positive_patterns):
+        return "with"
+
+    if any(keyword in text for keyword in ["attachment", "attachments", "file", "files", "document", "documents", "image", "images", "pdf", "doc"]):
+        return "with"
+
+    return None
+
+
+def _sender_candidates(raw_sender: str):
+    normalized = normalize_text(raw_sender).lower()
+    normalized = normalized.replace("<", " ").replace(">", " ").replace("@", " ").replace(".", " ").replace("_", " ").replace("-", " ")
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    if not normalized:
+        return set()
+
+    parts = {part for part in normalized.split() if len(part) > 1}
+    compact = normalized.replace(" ", "")
+    if len(compact) > 1:
+        parts.add(compact)
+    return parts
+
+
+def _matches_sender_terms(raw_sender: str, sender_terms):
+    candidates = _sender_candidates(raw_sender)
+    if not candidates:
+        return False
+
+    for sender_term in sender_terms:
+        cleaned_term = normalize_text(sender_term).lower().strip()
+        if not cleaned_term:
+            continue
+
+        compact_term = cleaned_term.replace(" ", "")
+        if compact_term and any(compact_term in candidate for candidate in candidates):
+            return True
+
+        for term_part in cleaned_term.split():
+            if term_part in candidates:
+                return True
+
+            if any(
+                SequenceMatcher(None, term_part, candidate).ratio() >= 0.82
+                for candidate in candidates
+                if abs(len(candidate) - len(term_part)) <= 4
+            ):
+                return True
+
+    return False
 
 
 def _parse_query(query: str):
@@ -189,11 +286,14 @@ def _parse_query(query: str):
         tokens = [token for token in tokens if token not in sender_term.split()]
 
     wants_tasks = any(keyword in text for keyword in ["task", "tasks", "action", "todo", "follow up", "follow-up", "deadline"])
-    wants_attachments = any(
-        keyword in text for keyword in ["attachment", "attachments", "file", "files", "document", "documents", "pdf", "doc", "image", "images"]
-    )
+    attachment_constraint = _detect_attachment_constraint(text)
+    without_attachments = attachment_constraint == "without"
+    wants_attachments = attachment_constraint == "with"
 
-    attachment_type = _detect_attachment_type(text)
+    if wants_attachments or without_attachments:
+        tokens = [token for token in tokens if token not in ATTACHMENT_QUERY_TOKENS]
+
+    attachment_type = None if without_attachments else _detect_attachment_type(text)
     mailbox = _detect_mailbox(text)
 
     intent = None
@@ -230,6 +330,7 @@ def _parse_query(query: str):
         "urgency": urgency,
         "wants_tasks": wants_tasks,
         "wants_attachments": wants_attachments,
+        "without_attachments": without_attachments,
         "attachment_type": attachment_type,
         "date_from": date_from,
         "sender_terms": sender_terms,
@@ -237,14 +338,128 @@ def _parse_query(query: str):
     }
 
 
-def _score_email(email, parsed):
+def _has_search_constraints(parsed):
+    return any(
+        [
+            bool(parsed["tokens"]),
+            bool(parsed["intent"]),
+            bool(parsed["urgency"]),
+            bool(parsed["wants_tasks"]),
+            bool(parsed["wants_attachments"]),
+            bool(parsed["without_attachments"]),
+            bool(parsed["attachment_type"]),
+            bool(parsed["date_from"]),
+            bool(parsed["sender_terms"]),
+            bool(parsed["mailbox"]),
+        ]
+    )
+
+
+def _label_search_terms(email):
+    labels = _label_set(email)
+    terms = []
+    if "UNREAD" in labels:
+        terms.append("unread")
+    if "STARRED" in labels:
+        terms.append("starred")
+    if "SENT" in labels:
+        terms.extend(["sent", "sent mailbox"])
+    if "DRAFT" in labels:
+        terms.extend(["draft", "drafts"])
+    if "TRASH" in labels:
+        terms.extend(["trash", "deleted"])
+    if "INBOX" not in labels and "SENT" not in labels and "DRAFT" not in labels and "TRASH" not in labels:
+        terms.extend(["archive", "archived"])
+    if "HAS_ATTACHMENT" in labels:
+        terms.extend(["attachment", "attachments", "file", "files"])
+    return " ".join(terms)
+
+
+def _email_task_blob(email):
+    return " ".join(normalize_text(task.task_text).lower() for task in email.tasks.all())
+
+
+def _build_email_search_document(email):
+    prediction = _get_prediction(email)
+    parts = [
+        normalize_text(email.subject).lower(),
+        normalize_text(email.sender).lower(),
+        " ".join(sorted(_sender_candidates(email.sender))),
+        normalize_text(email.snippet).lower(),
+        normalize_text(email.full_body_text).lower(),
+        normalize_text(getattr(email, "project_name", "")).lower(),
+        _label_search_terms(email),
+        _email_task_blob(email),
+    ]
+
+    if prediction:
+        parts.extend(
+            [
+                normalize_text(prediction.urgency).lower(),
+                normalize_text(prediction.intent).lower(),
+            ]
+        )
+
+    return " ".join(part for part in parts if part).strip()
+
+
+def _build_query_search_text(parsed):
+    parts = []
+    parts.extend(parsed["sender_terms"])
+    parts.extend(parsed["tokens"])
+
+    if parsed["intent"]:
+        parts.append(parsed["intent"])
+    if parsed["urgency"]:
+        parts.append(parsed["urgency"])
+    if parsed["mailbox"]:
+        parts.append(parsed["mailbox"])
+    if parsed["wants_tasks"]:
+        parts.extend(["task", "action", "deadline"])
+    if parsed["wants_attachments"]:
+        parts.append(parsed["attachment_type"] or "attachments")
+    if parsed["without_attachments"]:
+        parts.append("without attachments")
+
+    query_text = " ".join(part for part in parts if part).strip()
+    return query_text or parsed["raw"]
+
+
+def _semantic_email_scores(emails, parsed):
+    if not emails:
+        return {}
+
+    query_text = _build_query_search_text(parsed)
+    documents = [_build_email_search_document(email) for email in emails]
+
+    try:
+        word_vectorizer = TfidfVectorizer(ngram_range=(1, 2), max_features=12000)
+        word_matrix = word_vectorizer.fit_transform([query_text, *documents])
+        word_scores = linear_kernel(word_matrix[0:1], word_matrix[1:]).flatten()
+    except ValueError:
+        word_scores = [0.0] * len(emails)
+
+    try:
+        char_vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), max_features=6000)
+        char_matrix = char_vectorizer.fit_transform([query_text, *documents])
+        char_scores = linear_kernel(char_matrix[0:1], char_matrix[1:]).flatten()
+    except ValueError:
+        char_scores = [0.0] * len(emails)
+
+    return {
+        email.gmail_id: float((word_score * 0.72) + (char_score * 0.28))
+        for email, word_score, char_score in zip(emails, word_scores, char_scores)
+    }
+
+
+def _score_email(email, parsed, semantic_score=0.0):
     if parsed["date_from"] and email.internal_date and email.internal_date < parsed["date_from"]:
         return 0, []
 
     if parsed["mailbox"] and not _email_matches_mailbox(email, parsed["mailbox"]):
         return 0, []
 
-    score = 0
+    score = semantic_score * 42
     reasons = []
 
     subject = normalize_text(email.subject).lower()
@@ -252,25 +467,28 @@ def _score_email(email, parsed):
     snippet = normalize_text(email.snippet).lower()
     body = normalize_text(email.full_body_text).lower()
     project_name = normalize_text(getattr(email, "project_name", "")).lower()
-    task_text = " ".join(normalize_text(task.task_text).lower() for task in email.tasks.all())
+    task_text = _email_task_blob(email)
     combined = f"{subject} {sender} {snippet} {body} {project_name} {task_text}"
 
     haystacks = [
         (subject, 8, "subject"),
         (project_name, 7, "project"),
         (sender, 10, "sender"),
-        (snippet, 4, "snippet"),
-        (body, 3, "body"),
-        (task_text, 7, "task"),
+        (snippet, 5, "snippet"),
+        (body, 4, "body"),
+        (task_text, 9, "task"),
     ]
 
-    if parsed["raw"] and parsed["raw"] in combined:
-        score += 10
+    if semantic_score >= 0.08:
+        reasons.append("semantic")
+
+    if parsed["raw"] and len(parsed["raw"]) > 4 and parsed["raw"] in combined:
+        score += 12
         reasons.append("phrase")
 
     if parsed["sender_terms"]:
-        if any(term in sender for term in parsed["sender_terms"]):
-            score += 16
+        if _matches_sender_terms(email.sender, parsed["sender_terms"]):
+            score += 20
             reasons.append("sender")
         else:
             return 0, []
@@ -284,23 +502,38 @@ def _score_email(email, parsed):
 
     prediction = _get_prediction(email)
     if parsed["intent"] and prediction and prediction.intent == parsed["intent"]:
-        score += 8
+        score += 10
         reasons.append("intent")
 
     if parsed["urgency"] and prediction and prediction.urgency == parsed["urgency"]:
-        score += 8
+        score += 10
         reasons.append("urgency")
 
     if parsed["wants_tasks"] and email.tasks.exists():
-        score += 6
+        score += 8
         reasons.append("tasks")
 
-    if parsed["wants_attachments"] or parsed["attachment_type"]:
+    if parsed["without_attachments"]:
         if _has_attachment(email):
-            score += 7
+            return 0, []
+        score += 10
+        reasons.append("without-attachments")
+    elif parsed["wants_attachments"] or parsed["attachment_type"]:
+        if _has_attachment(email):
+            score += 10
             reasons.append("attachments")
         else:
             return 0, []
+
+    if parsed["tokens"] and task_text:
+        matched_task_tokens = [token for token in parsed["tokens"] if token and token in task_text]
+        if matched_task_tokens:
+            score += 8 + min(len(matched_task_tokens), 3) * 2
+            reasons.append("task-match")
+
+    if parsed["date_from"] and email.internal_date and email.internal_date >= parsed["date_from"]:
+        score += 4
+        reasons.append("date")
 
     return score, reasons
 
@@ -342,18 +575,18 @@ def _serialize_email_result(email, score, reasons):
 def _collect_attachment_results(user, emails, parsed, limit=8):
     attachments = []
     matching_email_ids = set()
+    if parsed["without_attachments"]:
+        return attachments, matching_email_ids
+
     candidate_emails = [email for email in emails if _has_attachment(email)]
 
     if not candidate_emails:
         return attachments, matching_email_ids
 
-    try:
-        service = get_gmail_service(user)
-    except GmailAuthError:
-        return attachments, matching_email_ids
-
-    for email in candidate_emails[:40]:
+    inspection_limit = 150 if (parsed["wants_attachments"] or parsed["attachment_type"]) else 60
+    for email in candidate_emails[:inspection_limit]:
         try:
+            service = get_gmail_service(user, credential=email.gmail_account)
             message = service.users().messages().get(userId="me", id=email.gmail_id, format="full").execute()
         except Exception:
             continue
@@ -378,6 +611,7 @@ def _collect_attachment_results(user, emails, parsed, limit=8):
                     "attachment_id": attachment["attachment_id"],
                     "name": attachment["filename"],
                     "sender": email.sender,
+                    "source_email": getattr(email, "source_email", ""),
                     "project_name": email.project_name,
                     "size": attachment["size"],
                     "mime_type": attachment["mime_type"],
@@ -391,11 +625,14 @@ def _collect_attachment_results(user, emails, parsed, limit=8):
 
 def search_mail_context(user, queryset, query: str, limit: int = 8):
     parsed = _parse_query(query)
+    has_constraints = _has_search_constraints(parsed)
+    emails = list(queryset)
+    semantic_scores = _semantic_email_scores(emails, parsed)
     scored = []
 
-    for email in queryset:
-        score, reasons = _score_email(email, parsed)
-        if score > 0 or (not parsed["tokens"] and not parsed["sender_terms"] and not parsed["mailbox"]):
+    for email in emails:
+        score, reasons = _score_email(email, parsed, semantic_scores.get(email.gmail_id, 0.0))
+        if score > 0 or not has_constraints:
             scored.append((email, score, reasons))
 
     scored.sort(
@@ -407,8 +644,9 @@ def search_mail_context(user, queryset, query: str, limit: int = 8):
         reverse=True,
     )
 
-    candidate_matches = scored[: max(limit * 5, 30)]
-    attachments, attachment_email_ids = _collect_attachment_results(user, [item[0] for item in candidate_matches], parsed)
+    attachment_source = emails if (parsed["wants_attachments"] or parsed["attachment_type"]) else [item[0] for item in scored[: max(limit * 6, 60)]]
+    attachments, attachment_email_ids = _collect_attachment_results(user, attachment_source, parsed)
+    candidate_matches = scored[: max(limit * 6, 60)]
 
     if parsed["attachment_type"]:
         candidate_matches = [item for item in candidate_matches if item[0].gmail_id in attachment_email_ids]
@@ -443,11 +681,31 @@ def search_mail_context(user, queryset, query: str, limit: int = 8):
                 }
             )
 
+    # Build suggestions: top results by semantic score when main results are empty or weak
+    suggestions = []
+    if not top_emails and has_constraints:
+        semantic_top = sorted(
+            emails,
+            key=lambda e: semantic_scores.get(e.gmail_id, 0.0),
+            reverse=True,
+        )[:3]
+        for email in semantic_top:
+            sem_score = semantic_scores.get(email.gmail_id, 0.0)
+            if sem_score > 0.01:
+                suggestions.append({
+                    "gmail_id": email.gmail_id,
+                    "subject": email.subject,
+                    "sender": email.sender,
+                    "snippet": email.snippet,
+                    "internal_date": email.internal_date.isoformat() if email.internal_date else None,
+                })
+
     return {
         "query": query,
         "matched_emails": top_emails,
         "related_attachments": attachments,
         "related_tasks": task_results[:8],
+        "suggestions": suggestions,
         "detected_context": {
             "intent": parsed["intent"],
             "urgency": parsed["urgency"],
@@ -455,6 +713,7 @@ def search_mail_context(user, queryset, query: str, limit: int = 8):
             "sender_terms": parsed["sender_terms"],
             "wants_tasks": parsed["wants_tasks"],
             "wants_attachments": parsed["wants_attachments"],
+            "without_attachments": parsed["without_attachments"],
             "attachment_type": parsed["attachment_type"],
             "date_from": parsed["date_from"].isoformat() if parsed["date_from"] else None,
         },

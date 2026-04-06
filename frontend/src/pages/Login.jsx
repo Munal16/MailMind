@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { House, LockKeyhole, Mail } from "lucide-react";
-import { getDefaultAppRoute, getGoogleLoginUrl, getMe, loginUser } from "../api/auth";
+import { finalizeSession, getDefaultAppRoute, getGoogleLoginUrl, getMe, loginUser } from "../api/auth";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import BrandLogo from "../components/BrandLogo";
@@ -27,6 +27,8 @@ export default function Login() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const addingAccount = searchParams.get("mode") === "add-account";
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -40,10 +42,15 @@ export default function Login() {
 
     setLoading(true);
     try {
-      await loginUser({ username: emailOrUsername.trim(), password });
+      const auth = await loginUser({ username: emailOrUsername.trim(), password });
       const profile = await getMe();
-      const next = location.state?.from || getDefaultAppRoute(profile);
-      navigate(next, { replace: true });
+      finalizeSession(profile, auth.access, auth.refresh);
+      const next = location.state?.from;
+      if (!next && !profile.connected_gmail_accounts) {
+        navigate("/connect-email", { replace: true });
+      } else {
+        navigate(next || getDefaultAppRoute(profile), { replace: true });
+      }
     } catch (err) {
       setError(formatLoginError(err));
     } finally {
@@ -77,9 +84,15 @@ export default function Login() {
 
           <div className="login-page__header">
             <div className="login-page__eyebrow">Sign in</div>
-            <h1 className="login-page__title">Welcome back to MailMind</h1>
-            <p className="login-page__description">Sign in to check your inbox, tasks, and attachments.</p>
-            <p className="login-page__helper-note">Google sign-in logs you into MailMind first.</p>
+            <h1 className="login-page__title">{addingAccount ? "Add another MailMind account" : "Welcome back to MailMind"}</h1>
+            <p className="login-page__description">
+              {addingAccount
+                ? "Sign in to keep another MailMind workspace available on this device."
+                : "Sign in to check your inbox, tasks, and attachments."}
+            </p>
+            <p className="login-page__helper-note">
+              {addingAccount ? "This account will be added alongside your current session." : "Google sign-in logs you into MailMind first."}
+            </p>
           </div>
         </div>
 

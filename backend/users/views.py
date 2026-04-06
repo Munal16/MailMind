@@ -26,6 +26,7 @@ def profile_photo_url(request, profile):
 
 
 def serialize_profile(request, user, profile):
+    connected_gmail_accounts = GmailCredential.objects.filter(user=user, refresh_token__isnull=False).count()
     return {
         "id": user.id,
         "username": user.username,
@@ -34,6 +35,7 @@ def serialize_profile(request, user, profile):
         "is_superuser": user.is_superuser,
         "job_title": profile.job_title or "",
         "profile_photo_url": profile_photo_url(request, profile),
+        "connected_gmail_accounts": connected_gmail_accounts,
         "notification_preferences": {
             "urgent": profile.notify_urgent,
             "deadlines": profile.notify_deadlines,

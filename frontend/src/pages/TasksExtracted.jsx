@@ -53,9 +53,16 @@ function cleanTextBlock(value, maxLength = 220) {
 
 function confidenceLabel(score) {
   const value = Number(score || 0);
-  if (value >= 0.85) return "High confidence";
-  if (value >= 0.65) return "Medium confidence";
-  return "Low confidence";
+  if (value >= 0.85) return "Verified task";
+  if (value >= 0.65) return "Likely task";
+  return "Possible task";
+}
+
+function confidenceTooltip(score) {
+  const value = Number(score || 0);
+  if (value >= 0.85) return "MailMind is highly confident this is a real action item from the email.";
+  if (value >= 0.65) return "MailMind detected this as a probable task — worth reviewing.";
+  return "MailMind flagged this as a possible task but it may need manual review.";
 }
 
 function normalizeTask(task) {
@@ -74,19 +81,49 @@ function normalizeTask(task) {
     confidence,
     confidencePercent: Math.round(confidence * 100),
     confidenceLabel: confidenceLabel(confidence),
+    confidenceTooltip: confidenceTooltip(confidence),
     priorityKey: confidence >= 0.85 ? "high" : confidence >= 0.65 ? "medium" : "low",
   };
 }
 
-function TaskCard({ task, focused, onOpenInbox }) {
+const STATUS_TRANSITIONS = {
+  Pending: [{ label: "Start", next: "In Progress" }],
+  "In Progress": [
+    { label: "Complete", next: "Completed" },
+    { label: "Reopen", next: "Pending" },
+  ],
+  Completed: [{ label: "Reopen", next: "Pending" }],
+};
+
+function TaskCard({ task, focused, onOpenInbox, onMove }) {
+  const [moving, setMoving] = useState(false);
+
+  const handleMove = async (nextStatus) => {
+    setMoving(true);
+    try {
+      await onMove(task.id, nextStatus);
+    } finally {
+      setMoving(false);
+    }
+  };
+
+  const transitions = STATUS_TRANSITIONS[task.status] || [];
+
   return (
     <article className={cn("tasks-page__task-card", focused && "tasks-page__task-card--focused")}>
       <div className="tasks-page__task-top">
         <div className="tasks-page__task-tags">
-          <span className={`tasks-page__badge tasks-page__badge--${task.priorityKey}`}>{task.confidenceLabel}</span>
+          <span
+            className={`tasks-page__badge tasks-page__badge--${task.priorityKey}`}
+            title={task.confidenceTooltip}
+          >
+            {task.confidenceLabel}
+          </span>
           {task.projectName ? <span className="tasks-page__badge tasks-page__badge--project">{task.projectName}</span> : null}
         </div>
-        <span className="tasks-page__confidence">{task.confidencePercent}%</span>
+        <span className="tasks-page__confidence" title={task.confidenceTooltip}>
+          {task.confidencePercent}% AI match
+        </span>
       </div>
 
       <h3 className="tasks-page__task-title">{task.taskText}</h3>
@@ -120,6 +157,17 @@ function TaskCard({ task, focused, onOpenInbox }) {
       </div>
 
       <div className="tasks-page__task-actions">
+        {transitions.map((t) => (
+          <button
+            key={t.next}
+            type="button"
+            className="tasks-page__task-move-btn"
+            onClick={() => handleMove(t.next)}
+            disabled={moving}
+          >
+            {moving ? "..." : t.label}
+          </button>
+        ))}
         <button type="button" className="tasks-page__task-link" onClick={() => onOpenInbox(task.gmailId)}>
           Open in Inbox
           <ArrowRight className="h-4 w-4" />
@@ -266,6 +314,13 @@ export default function TasksExtracted() {
     [navigate]
   );
 
+  const moveTask = useCallback(async (taskId, nextStatus) => {
+    await api.patch(`/api/ai/tasks/${taskId}/`, { status: nextStatus });
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: nextStatus } : t))
+    );
+  }, []);
+
   return (
     <div className="tasks-page">
       <section className="tasks-page__hero">
@@ -411,6 +466,7 @@ export default function TasksExtracted() {
                         task={task}
                         focused={String(task.id) === String(focusedTaskId)}
                         onOpenInbox={openInbox}
+                        onMove={moveTask}
                       />
                     ))
                   ) : (

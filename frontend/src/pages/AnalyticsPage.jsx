@@ -139,9 +139,10 @@ export default function AnalyticsPage() {
   const pendingTasks = summary?.pending_tasks ?? 0;
   const attachmentsReceived = summary?.attachments_received ?? 0;
   const tasksWithDeadline = summary?.tasks_with_deadline ?? 0;
-  const analysisCoverage = totalEmails ? Math.round((totalPredictions / totalEmails) * 100) : 0;
+  const highUrgencyCount = summary?.urgency_distribution?.High ?? 0;
+  const highUrgencyRate = totalEmails ? Math.round((highUrgencyCount / totalEmails) * 100) : 0;
   const attachmentReach = totalEmails ? Math.round((attachmentsReceived / totalEmails) * 100) : 0;
-  const taskCoverage = totalPredictions ? Math.round((totalTasks / totalPredictions) * 100) : 0;
+  const taskCoverage = totalEmails ? Math.round((totalTasks / totalEmails) * 100) : 0;
 
   const urgencyData = useMemo(
     () =>
@@ -251,19 +252,19 @@ export default function AnalyticsPage() {
 
   const coverageRows = [
     {
-      label: "AI analysis coverage",
-      value: analysisCoverage,
-      note: `${totalPredictions} of ${totalEmails} emails are analyzed.`,
+      label: "Task detection rate",
+      value: taskCoverage,
+      note: `${totalTasks} tasks extracted across ${totalEmails} synced emails.`,
     },
     {
-      label: "Task detection coverage",
-      value: taskCoverage,
-      note: `${totalTasks} tasks were extracted from analyzed mail.`,
+      label: "High urgency rate",
+      value: highUrgencyRate,
+      note: `${highUrgencyCount} emails flagged high priority by MailMind.`,
     },
     {
       label: "Attachment reach",
       value: attachmentReach,
-      note: `${attachmentsReceived} emails include files.`,
+      note: `${attachmentsReceived} emails include files or shared documents.`,
     },
   ];
 
@@ -318,9 +319,9 @@ export default function AnalyticsPage() {
       <section className="analytics-page__stat-grid">
         {[
           {
-            title: "Analyzed coverage",
-            value: `${analysisCoverage}%`,
-            note: `${totalPredictions} of ${totalEmails} emails are covered by AI.`,
+            title: "High urgency rate",
+            value: `${highUrgencyRate}%`,
+            note: `${highUrgencyCount} of ${totalEmails} emails flagged as high priority.`,
             icon: Activity,
           },
           {

@@ -413,6 +413,32 @@
   color: hsl(var(--primary));
   font-size: 0.86rem;
   font-weight: 700;
+  cursor: pointer;
+}
+
+.tasks-page__task-move-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.72rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  background: hsl(var(--muted) / 0.4);
+  color: hsl(var(--card-foreground));
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.tasks-page__task-move-btn:hover:not(:disabled) {
+  background: hsl(var(--primary) / 0.1);
+  border-color: hsl(var(--primary) / 0.4);
+  color: hsl(var(--primary));
+}
+
+.tasks-page__task-move-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .tasks-page__empty-column {

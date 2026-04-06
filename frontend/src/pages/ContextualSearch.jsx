@@ -43,8 +43,9 @@ function detectedContextText(context) {
     context.intent ? `intent=${context.intent}` : null,
     context.urgency ? `urgency=${context.urgency}` : null,
     context.attachment_type ? `attachment=${context.attachment_type}` : null,
+    context.without_attachments ? "without attachments" : null,
     context.wants_tasks ? "task-focused" : null,
-    context.wants_attachments ? "attachment-aware" : null,
+    context.wants_attachments ? "with attachments" : null,
   ].filter(Boolean);
 
   return parts.join(" - ") || "general MailMind search";
@@ -232,16 +233,43 @@ export default function ContextualSearch() {
                   <div className="text-sm font-semibold text-card-foreground">{item.subject || "(no subject)"}</div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {item.sender || "Unknown sender"}
-                    {item.internal_date ? ` - ${new Date(item.internal_date).toLocaleString()}` : ""}
+                    {item.internal_date ? ` — ${new Date(item.internal_date).toLocaleDateString()}` : ""}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {item.project_name ? `${item.project_name} - ` : ""}
+                    {item.project_name ? `${item.project_name} — ` : ""}
                     {(item.match_reasons || []).join(", ") || "Matched by email content"}
                   </div>
                 </button>
               ))
+            ) : urlQuery && !loading ? (
+              <div className="py-2">
+                <div className="text-sm text-muted-foreground">No emails matched your search.</div>
+                {results?.suggestions?.length ? (
+                  <div className="mt-4">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Did you mean…?
+                    </div>
+                    <div className="divide-y divide-border">
+                      {results.suggestions.map((item) => (
+                        <button
+                          key={item.gmail_id}
+                          type="button"
+                          onClick={() => openDestination(`/app/inbox?email=${encodeURIComponent(item.gmail_id)}`)}
+                          className="w-full py-3 text-left first:pt-0 last:pb-0 opacity-80 hover:opacity-100"
+                        >
+                          <div className="text-sm font-medium text-card-foreground">{item.subject || "(no subject)"}</div>
+                          <div className="mt-0.5 text-xs text-muted-foreground">
+                            {item.sender || "Unknown sender"}
+                            {item.snippet ? ` — ${item.snippet.slice(0, 80)}…` : ""}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             ) : (
-              <div className="py-3 text-sm text-muted-foreground">No matching emails found.</div>
+              <div className="py-3 text-sm text-muted-foreground">Enter a query above to search your emails.</div>
             )}
           </div>
         </section>

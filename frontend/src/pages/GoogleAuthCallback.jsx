@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { getDefaultAppRoute, getMe, setAuthTokens } from "../api/auth";
+import { finalizeSession, getDefaultAppRoute, getMe, setAuthTokens } from "../api/auth";
 import { Button } from "../components/ui/button";
 import BrandLogo from "../components/BrandLogo";
 
@@ -22,8 +22,13 @@ export default function GoogleAuthCallback() {
       try {
         setAuthTokens(access, refresh);
         const profile = await getMe();
+        finalizeSession(profile, access, refresh);
         if (!cancelled) {
-          navigate(getDefaultAppRoute(profile), { replace: true });
+          if (!profile.connected_gmail_accounts) {
+            navigate("/connect-email", { replace: true });
+          } else {
+            navigate(getDefaultAppRoute(profile), { replace: true });
+          }
         }
       } catch {
         if (!cancelled) {

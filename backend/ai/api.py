@@ -300,6 +300,24 @@ def list_tasks(request):
     return Response({"tasks": data})
 
 
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def update_task(request, task_id):
+    task = ExtractedTask.objects.filter(user=request.user, id=task_id).first()
+    if not task:
+        return Response({"error": "Task not found"}, status=404)
+
+    status_value = request.data.get("status")
+    valid_statuses = [choice[0] for choice in ExtractedTask.STATUS_CHOICES]
+    if status_value not in valid_statuses:
+        return Response({"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}, status=400)
+
+    task.status = status_value
+    task.save(update_fields=["status"])
+
+    return Response({"id": task.id, "status": task.status})
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def priority_emails(request):
@@ -407,7 +425,11 @@ def _top_projects(emails):
 
 def _task_status_distribution(tasks):
     counts = Counter(task.status for task in tasks if task.status)
-    return dict(counts)
+    return {
+        "Pending": counts.get("Pending", 0),
+        "In Progress": counts.get("In Progress", 0),
+        "Completed": counts.get("Completed", 0),
+    }
 
 
 def _recent_insights(urgency_counts, intent_counts, tasks, emails):

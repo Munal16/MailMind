@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import DOMPurify from "dompurify";
 import {
@@ -24,7 +24,9 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Avatar } from "../components/ui/avatar";
 import api from "../api/client";
+import { getAccessToken } from "../api/sessionStore";
 import { cn } from "../lib/utils";
+import { useConfirm } from "../context/ConfirmContext";
 import "./Inbox.css";
 
 const mailboxOptions = [
@@ -216,10 +218,10 @@ function mapEmail(item) {
     taskCount: (item.tasks || []).length,
     tasks: item.tasks || [],
     priorityScore: item.prediction?.priority_score || 0,
-    labels: item.labels || [],
+    labels: Array.isArray(item.labels) ? item.labels : String(item.labels || "").split(",").filter(Boolean),
     isRead: Boolean(item.is_read),
     isStarred: Boolean(item.is_starred),
-    hasAttachment: (item.labels || []).includes("HAS_ATTACHMENT") || /attach/i.test(item.snippet || ""),
+    hasAttachment: (Array.isArray(item.labels) ? item.labels : String(item.labels || "").split(",").filter(Boolean)).includes("HAS_ATTACHMENT") || /attach/i.test(item.snippet || ""),
     internalDate: item.internal_date ? new Date(item.internal_date) : null,
   };
 }
@@ -296,9 +298,15 @@ function FilterSelect({ label, value, onChange, options }) {
 }
 
 export default function Inbox() {
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const { openCompose } = useOutletContext();
   const [searchParams] = useSearchParams();
+  const appliedUrlFocus = useRef({ email: null, mailbox: null });
+  const detailRequestRef = useRef(0);
+  const inboxRefreshRef = useRef(false);
+  const liveSyncRef = useRef(false);
+  const prevMailboxRef = useRef("all");
   const [emailsRaw, setEmailsRaw] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -312,6 +320,7 @@ export default function Inbox() {
   const [status, setStatus] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [changingTrash, setChangingTrash] = useState(false);
@@ -356,14 +365,23 @@ export default function Inbox() {
   }, []);
 
   const loadInbox = useCallback(
-    async ({ showFeedback = false } = {}) => {
+    async ({ showFeedback = false, silent = false } = {}) => {
+      if (inboxRefreshRef.current) {
+        return;
+      }
+
+      inboxRefreshRef.current = true;
       try {
-        setError("");
+        if (!silent) {
+          setError("");
+        }
         if (showFeedback) {
           setNotice("");
         }
-        setLoading(true);
-        const res = await api.get("/api/gmail/inbox/?limit=400");
+        if (!silent) {
+          setLoading(true);
+        }
+        const res = await api.get("/api/gmail/inbox/?limit=1200");
         const list = res.data.emails || [];
         setEmailsRaw(list);
         setSelectedId((current) => {
@@ -377,13 +395,18 @@ export default function Inbox() {
           setNotice("Inbox refreshed.");
         }
       } catch (err) {
-        setEmailsRaw([]);
-        setSelectedId(null);
-        setError(formatInboxError(err));
-        setStatus("");
-        setNotice("");
+        if (!silent) {
+          setEmailsRaw([]);
+          setSelectedId(null);
+          setError(formatInboxError(err));
+          setStatus("");
+          setNotice("");
+        }
       } finally {
-        setLoading(false);
+        inboxRefreshRef.current = false;
+        if (!silent) {
+          setLoading(false);
+        }
       }
     },
     []
@@ -410,7 +433,7 @@ export default function Inbox() {
       setNotice("");
       setStatus("Syncing Gmail mailboxes...");
 
-      const syncRes = await api.post("/api/gmail/sync/", { max_results: 120 });
+      const syncRes = await api.post("/api/gmail/sync/", { mode: "full", max_results: 500 });
       const syncedCount = Number(syncRes.data.saved || 0) + Number(syncRes.data.updated || 0);
 
       setStatus(`Synced ${syncedCount} emails. Refreshing MailMind analysis...`);
@@ -441,6 +464,22 @@ export default function Inbox() {
       setSyncing(false);
     }
   };
+
+  const refreshLatestMail = useCallback(async () => {
+    if (liveSyncRef.current || loading || syncing || analyzing || changingTrash || emptyingTrash) {
+      return;
+    }
+
+    liveSyncRef.current = true;
+    try {
+      await api.post("/api/gmail/sync/", { mode: "latest", max_results: 36 });
+      await loadInbox({ silent: true });
+    } catch {
+      // Keep live refresh silent so the inbox stays calm while polling.
+    } finally {
+      liveSyncRef.current = false;
+    }
+  }, [analyzing, changingTrash, emptyingTrash, loadInbox, loading, syncing]);
 
   const runAiAnalysis = async () => {
     try {
@@ -509,9 +548,14 @@ export default function Inbox() {
   };
 
   const emptyTrash = async () => {
-    if (!window.confirm("Permanently delete every email currently in Trash? This cannot be undone.")) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Empty Trash?",
+      description: "Every email currently in Trash will be permanently deleted. This cannot be undone.",
+      confirmLabel: "Empty Trash",
+      cancelLabel: "Cancel",
+      variant: "danger",
+    });
+    if (!ok) return;
 
     try {
       setEmptyingTrash(true);
@@ -546,23 +590,75 @@ export default function Inbox() {
   }, [loadInbox]);
 
   useEffect(() => {
+    setUrgency("All");
+    setIntent("All");
+    setProject("All");
+    setDateFilter("All time");
+    setQuery("");
+  }, [mailbox]);
+
+  useEffect(() => {
     if (!selectedId) {
+      detailRequestRef.current += 1;
       setDetail(null);
       return;
     }
 
+    const requestId = detailRequestRef.current + 1;
+    detailRequestRef.current = requestId;
+
     const loadDetail = async () => {
+      setDetailLoading(true);
       try {
         const res = await api.get(`/api/gmail/message/${selectedId}/`);
+        if (detailRequestRef.current !== requestId) {
+          return;
+        }
         setDetail(res.data);
         markEmailAsReadLocal(selectedId);
       } catch {
-        setDetail(null);
+        if (detailRequestRef.current === requestId) {
+          setDetail(null);
+        }
+      } finally {
+        if (detailRequestRef.current === requestId) {
+          setDetailLoading(false);
+        }
       }
     };
 
     void loadDetail();
   }, [markEmailAsReadLocal, selectedId]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshLatestMail();
+      }
+    };
+
+    const refreshTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void loadInbox({ silent: true });
+      }
+    }, 30000);
+
+    const syncTimer = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void refreshLatestMail();
+      }
+    }, 5000);
+
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+
+    return () => {
+      window.clearInterval(refreshTimer);
+      window.clearInterval(syncTimer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [loadInbox, refreshLatestMail]);
 
   const emails = useMemo(() => emailsRaw.map(mapEmail), [emailsRaw]);
 
@@ -619,34 +715,56 @@ export default function Inbox() {
   }, [dateFilter, emails, intent, mailbox, project, query, urgency]);
 
   useEffect(() => {
+    const mailboxChanged = prevMailboxRef.current !== mailbox;
+    prevMailboxRef.current = mailbox;
+
     if (filteredEmails.length === 0) {
       setSelectedId(null);
       setDetail(null);
       return;
     }
 
-    if (!selectedId || !filteredEmails.some((email) => email.id === selectedId)) {
+    if (mailboxChanged || !selectedId || !filteredEmails.some((email) => email.id === selectedId)) {
       setSelectedId(filteredEmails[0]?.id || null);
       setDetail(null);
       return;
     }
-  }, [filteredEmails, selectedId]);
+  }, [filteredEmails, mailbox, selectedId]);
 
   useEffect(() => {
-    if (!focusedEmailId) return;
+    if (!focusedEmailId) {
+      appliedUrlFocus.current.email = null;
+      return;
+    }
+
+    if (appliedUrlFocus.current.email === focusedEmailId) {
+      return;
+    }
+
     const match = emails.find((email) => email.id === focusedEmailId);
-    if (match && match.id !== selectedId) {
+    if (match) {
       setSelectedId(match.id);
+      appliedUrlFocus.current.email = focusedEmailId;
     }
-  }, [emails, focusedEmailId, selectedId]);
+  }, [emails, focusedEmailId]);
 
   useEffect(() => {
-    if (!focusedMailbox) return;
-    if (!mailboxOptions.some((option) => option.key === focusedMailbox)) return;
-    if (focusedMailbox !== mailbox) {
-      setMailbox(focusedMailbox);
+    if (!focusedMailbox) {
+      appliedUrlFocus.current.mailbox = null;
+      return;
     }
-  }, [focusedMailbox, mailbox]);
+
+    if (!mailboxOptions.some((option) => option.key === focusedMailbox)) {
+      return;
+    }
+
+    if (appliedUrlFocus.current.mailbox === focusedMailbox) {
+      return;
+    }
+
+    setMailbox(focusedMailbox);
+    appliedUrlFocus.current.mailbox = focusedMailbox;
+  }, [focusedMailbox]);
 
   const selected = useMemo(() => filteredEmails.find((email) => email.id === selectedId) || null, [filteredEmails, selectedId]);
   const selectedIdentity = useMemo(() => parseIdentity(detail?.from || selected?.sender), [detail, selected]);
@@ -753,6 +871,7 @@ export default function Inbox() {
 
   const handleSelectEmail = useCallback(
     (email) => {
+      setDetail(null);
       setSelectedId(email.id);
       if (!email.isRead) {
         markEmailAsReadLocal(email.id);
@@ -763,10 +882,12 @@ export default function Inbox() {
 
   const downloadAttachment = async (attachment) => {
     if (!selectedId) return;
-    const token = localStorage.getItem("access_token");
+    const token = getAccessToken();
     const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
     const url = `${baseUrl}/api/gmail/attachment/${selectedId}/${attachment.attachment_id}/?filename=${encodeURIComponent(attachment.filename)}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     const blob = await res.blob();
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -1091,7 +1212,9 @@ export default function Inbox() {
               <div className="inbox-page__content-section">
                 <div className="inbox-page__section-title">Email</div>
                 <div className="inbox-page__message-body">
-                  {detail?.body_text ? (
+                  {detailLoading ? (
+                    <div className="inbox-page__detail-loading">Loading message…</div>
+                  ) : detail?.body_text ? (
                     <div className="whitespace-pre-wrap">{detail.body_text}</div>
                   ) : detail?.body_html ? (
                     <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(detail.body_html) }} />

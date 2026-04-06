@@ -496,6 +496,13 @@
   line-height: 1.82;
 }
 
+.inbox-page__detail-loading {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+  opacity: 0.7;
+}
+
 .inbox-page__summary-card {
   display: flex;
   flex-direction: column;
