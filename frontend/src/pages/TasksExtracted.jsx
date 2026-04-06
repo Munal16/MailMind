@@ -121,9 +121,6 @@ function TaskCard({ task, focused, onOpenInbox, onMove }) {
           </span>
           {task.projectName ? <span className="tasks-page__badge tasks-page__badge--project">{task.projectName}</span> : null}
         </div>
-        <span className="tasks-page__confidence" title={task.confidenceTooltip}>
-          {task.confidencePercent}% AI match
-        </span>
       </div>
 
       <h3 className="tasks-page__task-title">{task.taskText}</h3>
