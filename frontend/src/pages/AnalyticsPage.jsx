@@ -541,9 +541,9 @@ export default function AnalyticsPage() {
                       tickLine={{ stroke: "hsl(var(--border))" }}
                     />
                     <Tooltip contentStyle={tooltipStyle()} />
+                    <Bar dataKey="low" stackId="urgency" fill="hsl(var(--success))" radius={0} />
+                    <Bar dataKey="medium" stackId="urgency" fill="hsl(var(--warning))" radius={0} />
                     <Bar dataKey="high" stackId="urgency" fill="hsl(var(--urgent))" radius={[8, 8, 0, 0]} />
-                    <Bar dataKey="medium" stackId="urgency" fill="hsl(var(--warning))" radius={[8, 8, 0, 0]} />
-                    <Bar dataKey="low" stackId="urgency" fill="hsl(var(--success))" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -566,7 +566,7 @@ export default function AnalyticsPage() {
               icon={CheckSquare}
             />
 
-            {taskStatusData.length ? (
+            {taskTotal > 0 ? (
               <div className="analytics-page__donut-layout">
                 <div className="analytics-page__donut-shell">
                   <div className="analytics-page__donut-center">
@@ -576,8 +576,15 @@ export default function AnalyticsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Tooltip contentStyle={tooltipStyle()} />
-                      <Pie data={taskStatusData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={86} paddingAngle={3}>
-                        {taskStatusData.map((item) => (
+                      <Pie
+                        data={taskStatusData.filter((item) => item.value > 0)}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={58}
+                        outerRadius={86}
+                        paddingAngle={3}
+                      >
+                        {taskStatusData.filter((item) => item.value > 0).map((item) => (
                           <Cell key={item.name} fill={item.color} />
                         ))}
                       </Pie>
