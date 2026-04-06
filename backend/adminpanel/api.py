@@ -76,7 +76,7 @@ def _service_status(total_users, connected_users):
             "id": "gmail",
             "label": "Gmail integration",
             "status": "Active" if connected_users else "Needs attention",
-            "details": f"{connected_users} of {total_users} users currently have a connected Gmail inbox.",
+            "details": f"{connected_users} of {total_users} users currently have at least one connected Gmail inbox.",
         },
         {
             "id": "search",
@@ -138,6 +138,7 @@ def _recent_users():
     rows = []
     for user in User.objects.order_by("-date_joined")[:8]:
         gmail_connected = GmailCredential.objects.filter(user=user, refresh_token__isnull=False).exists()
+        gmail_account_count = GmailCredential.objects.filter(user=user, refresh_token__isnull=False).count()
         rows.append(
             {
                 "id": user.id,
@@ -146,6 +147,7 @@ def _recent_users():
                 "joined_at": timezone.localtime(user.date_joined).isoformat(),
                 "is_staff": user.is_staff,
                 "gmail_connected": gmail_connected,
+                "gmail_account_count": gmail_account_count,
             }
         )
     return rows
@@ -153,10 +155,9 @@ def _recent_users():
 
 def _admin_directory(request_user):
     rows = []
-    gmail_lookup = {
-        user_id: True
-        for user_id in GmailCredential.objects.filter(refresh_token__isnull=False).values_list("user_id", flat=True)
-    }
+    gmail_lookup = defaultdict(int)
+    for user_id in GmailCredential.objects.filter(refresh_token__isnull=False).values_list("user_id", flat=True):
+        gmail_lookup[user_id] += 1
     email_counts = defaultdict(int)
     task_counts = defaultdict(int)
 
@@ -175,6 +176,7 @@ def _admin_directory(request_user):
                 "joined_at": timezone.localtime(user.date_joined).isoformat(),
                 "last_login": timezone.localtime(user.last_login).isoformat() if user.last_login else None,
                 "gmail_connected": bool(gmail_lookup.get(user.id)),
+                "gmail_account_count": gmail_lookup.get(user.id, 0),
                 "is_staff": user.is_staff,
                 "is_superuser": user.is_superuser,
                 "is_current_user": user.id == request_user.id,
@@ -224,7 +226,7 @@ def _recent_activity():
             {
                 "kind": "analysis",
                 "title": f"AI analyzed {prediction.email.subject or '(no subject)'}",
-                "description": f"Urgency: {prediction.urgency or 'Unknown'} · Intent: {prediction.intent or 'Unknown'}",
+                "description": f"Urgency: {prediction.urgency or 'Unknown'} - Intent: {prediction.intent or 'Unknown'}",
                 "timestamp": timezone.localtime(prediction.created_at),
             }
         )
@@ -287,7 +289,8 @@ def _alerts(total_users, connected_users, total_emails, total_predictions, deadl
 def overview(request):
     total_users = User.objects.count()
     admin_users = User.objects.filter(is_staff=True).count()
-    connected_users = GmailCredential.objects.filter(refresh_token__isnull=False).count()
+    connected_users = GmailCredential.objects.filter(refresh_token__isnull=False).values("user_id").distinct().count()
+    connected_gmail_accounts = GmailCredential.objects.filter(refresh_token__isnull=False).count()
     total_emails = EmailMessage.objects.count()
     total_predictions = EmailPrediction.objects.count()
     total_tasks = ExtractedTask.objects.count()
@@ -302,6 +305,7 @@ def overview(request):
                 "total_users": total_users,
                 "admin_users": admin_users,
                 "gmail_connected_users": connected_users,
+                "connected_gmail_accounts": connected_gmail_accounts,
                 "total_emails": total_emails,
                 "total_predictions": total_predictions,
                 "total_tasks": total_tasks,
@@ -365,3 +369,4 @@ def set_admin_access(request, user_id):
             },
         }
     )
+

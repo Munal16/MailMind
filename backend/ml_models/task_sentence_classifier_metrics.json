@@ -1,0 +1,42 @@
+{
+  "dataset_rows": 211481,
+  "sentence_rows": 424038,
+  "train_rows": 381647,
+  "val_rows": 42391,
+  "threshold": 0.6,
+  "accuracy": 0.8637682526951476,
+  "weighted_f1": 0.863356915087291,
+  "macro_f1": 0.863384747395336,
+  "task_metrics": {
+    "precision": 0.9108013567945729,
+    "recall": 0.8076796540865724,
+    "f1": 0.8561464690496948
+  },
+  "classification_report": {
+    "Not Task": {
+      "precision": 0.8260425966075756,
+      "recall": 0.9202898550724637,
+      "f1-score": 0.8706230257409772,
+      "support": 21114.0
+    },
+    "Task": {
+      "precision": 0.9108013567945729,
+      "recall": 0.8076796540865724,
+      "f1-score": 0.8561464690496948,
+      "support": 21277.0
+    },
+    "accuracy": 0.8637682526951476,
+    "macro avg": {
+      "precision": 0.8684219767010742,
+      "recall": 0.8639847545795181,
+      "f1-score": 0.863384747395336,
+      "support": 42391.0
+    },
+    "weighted avg": {
+      "precision": 0.8685849320207233,
+      "recall": 0.8637682526951476,
+      "f1-score": 0.863356915087291,
+      "support": 42391.0
+    }
+  }
+}

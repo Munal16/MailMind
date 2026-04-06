@@ -23,7 +23,7 @@ def gmail_message_detail(request, gmail_id):
         return Response({"error": "Email not found in DB. Sync first."}, status=404)
 
     try:
-        service = get_gmail_service(request.user)
+        service = get_gmail_service(request.user, credential=email.gmail_account)
     except GmailAuthError as exc:
         return Response({"error": str(exc), "requires_reconnect": True}, status=400)
     message = service.users().messages().get(userId="me", id=gmail_id, format="full").execute()
@@ -114,6 +114,7 @@ def gmail_message_detail(request, gmail_id):
             "to": recipient,
             "cc": cc_recipient,
             "date": date,
+            "source_email": email.source_email,
             "project_name": email.project_name,
             "body_text": stored_body,
             "body_html": body_html,

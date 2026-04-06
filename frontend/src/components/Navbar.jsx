@@ -20,8 +20,10 @@ import SearchBar from "./SearchBar";
 import { SidebarTrigger } from "./ui/sidebar";
 import { Avatar } from "./ui/avatar";
 import { useTheme } from "../context/ThemeContext";
+import { useConfirm } from "../context/ConfirmContext";
 import BrandLogo from "./BrandLogo";
 import { logout } from "../api/auth";
+import { getSessionAppRoute } from "../api/sessionStore";
 import api from "../api/client";
 import { cn } from "../lib/utils";
 import { filterSearchDestinations } from "../lib/searchDestinations";
@@ -240,7 +242,7 @@ export default function Navbar() {
     [navigate]
   );
 
-  const confirmLogout = useCallback(() => window.confirm("Log out of MailMind now?"), []);
+  const confirm = useConfirm();
 
   return (
     <header ref={shellRef} className="flex h-14 items-center justify-between gap-3 border-b border-border bg-card px-4 lg:px-6">
@@ -610,12 +612,17 @@ export default function Navbar() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!confirmLogout()) {
-                      return;
-                    }
-                    logout();
-                    navigate("/", { replace: true });
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: "Log out of MailMind?",
+                      description: "You will be signed out of your current session. Any unsaved work will be lost.",
+                      confirmLabel: "Log out",
+                      cancelLabel: "Stay logged in",
+                      variant: "logout",
+                    });
+                    if (!ok) return;
+                    const nextSession = logout();
+                    navigate(nextSession ? getSessionAppRoute(nextSession) : "/", { replace: true });
                   }}
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm font-medium text-destructive transition-all hover:bg-destructive/10"
                 >

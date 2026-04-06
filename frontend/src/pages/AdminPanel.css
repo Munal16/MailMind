@@ -143,6 +143,8 @@
   gap: 1rem;
   padding: 1.3rem;
   align-self: start;
+  align-content: start;
+  height: fit-content;
 }
 
 .admin-page__section--spotlight {

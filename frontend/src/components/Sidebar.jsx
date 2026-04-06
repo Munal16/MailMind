@@ -15,7 +15,9 @@ import {
 } from "lucide-react";
 import { Sidebar as ShellSidebar, useSidebar } from "./ui/sidebar";
 import { cn } from "../lib/utils";
+import { useConfirm } from "../context/ConfirmContext";
 import { logout } from "../api/auth";
+import { getSessionAppRoute } from "../api/sessionStore";
 import BrandLogo from "./BrandLogo";
 import api from "../api/client";
 
@@ -56,7 +58,7 @@ export default function Sidebar({ onCompose }) {
   const navigate = useNavigate();
   const [isStaff, setIsStaff] = useState(false);
 
-  const confirmLogout = () => window.confirm("Log out of MailMind now?");
+  const confirm = useConfirm();
 
   useEffect(() => {
     let cancelled = false;
@@ -118,13 +120,18 @@ export default function Sidebar({ onCompose }) {
           label="Logout"
           icon={LogOut}
           destructive
-          onClick={(event) => {
+          onClick={async (event) => {
             event.preventDefault();
-            if (!confirmLogout()) {
-              return;
-            }
-            logout();
-            navigate("/", { replace: true });
+            const ok = await confirm({
+              title: "Log out of MailMind?",
+              description: "You will be signed out of your current session. Any unsaved work will be lost.",
+              confirmLabel: "Log out",
+              cancelLabel: "Stay logged in",
+              variant: "logout",
+            });
+            if (!ok) return;
+            const nextSession = logout();
+            navigate(nextSession ? getSessionAppRoute(nextSession) : "/", { replace: true });
           }}
         />
       </div>

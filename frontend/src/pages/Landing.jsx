@@ -280,12 +280,12 @@ export default function Landing() {
                           <div className="landing-hero__mail-copy">
                             <div className="landing-hero__mail-subject">{row.subject}</div>
                             <div className="landing-hero__mail-sender">{row.sender}</div>
-                          </div>
-                          <div className="landing-hero__mail-tags">
-                            <span className={`landing-hero__mail-tag landing-hero__mail-tag--${row.urgency.toLowerCase()}`}>
-                              {row.urgency}
-                            </span>
-                            <span className="landing-hero__mail-tag landing-hero__mail-tag--neutral">{row.intent}</span>
+                            <div className="landing-hero__mail-tags">
+                              <span className={`landing-hero__mail-tag landing-hero__mail-tag--${row.urgency.toLowerCase()}`}>
+                                {row.urgency}
+                              </span>
+                              <span className="landing-hero__mail-tag landing-hero__mail-tag--neutral">{row.intent}</span>
+                            </div>
                           </div>
                         </div>
                       ))}

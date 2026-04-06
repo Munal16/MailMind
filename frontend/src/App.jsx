@@ -1,4 +1,5 @@
 ﻿import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { ConfirmProvider } from "./context/ConfirmContext";
 import DashboardLayout from "./layouts/DashboardLayout";
 import RequireAuth from "./components/RequireAuth";
 import RequireAdmin from "./components/RequireAdmin";
@@ -19,6 +20,7 @@ import AdminPanel from "./pages/AdminPanel";
 
 export default function App() {
   return (
+    <ConfirmProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
@@ -64,5 +66,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </ConfirmProvider>
   );
 }

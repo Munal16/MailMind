@@ -472,6 +472,149 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.settings-page__accounts-grid,
+.settings-page__gmail-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.settings-page__session-card,
+.settings-page__gmail-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(circle at top right, hsl(var(--primary) / 0.06), transparent 26%),
+    linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.96) 100%);
+  box-shadow: 0 14px 30px hsl(var(--foreground) / 0.05);
+}
+
+.settings-page__session-card--active,
+.settings-page__gmail-card--active {
+  border-color: hsl(var(--primary) / 0.3);
+  box-shadow: 0 18px 40px hsl(var(--primary) / 0.08);
+}
+
+.settings-page__session-head,
+.settings-page__gmail-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.settings-page__session-profile {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.settings-page__session-avatar {
+  width: 3.2rem;
+  height: 3.2rem;
+  font-size: 0.9rem;
+}
+
+.settings-page__session-name,
+.settings-page__gmail-name {
+  color: hsl(var(--card-foreground));
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.settings-page__session-email,
+.settings-page__gmail-email {
+  margin-top: 0.2rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.85rem;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.settings-page__session-badges,
+.settings-page__gmail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.settings-page__pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.settings-page__pill--primary {
+  background: hsl(var(--primary) / 0.13);
+  color: hsl(var(--primary));
+}
+
+.settings-page__pill--success {
+  background: hsl(var(--success) / 0.12);
+  color: hsl(var(--success));
+}
+
+.settings-page__pill--warning {
+  background: hsl(var(--warning) / 0.14);
+  color: hsl(var(--warning));
+}
+
+.settings-page__pill--muted {
+  background: hsl(var(--accent));
+  color: hsl(var(--muted-foreground));
+}
+
+.settings-page__session-meta {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.settings-page__session-meta-item {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 1rem;
+  background: hsl(var(--background) / 0.85);
+}
+
+.settings-page__session-meta-item span {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.settings-page__session-meta-item strong {
+  color: hsl(var(--card-foreground));
+  font-size: 0.9rem;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.settings-page__current-note {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.8rem 0.9rem;
+  border-radius: 1rem;
+  background: hsl(var(--primary) / 0.08);
+  color: hsl(var(--primary));
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .settings-page__account-item {
   padding: 1rem;
   border: 1px solid hsl(var(--border));
@@ -569,7 +712,7 @@
   }
 
   .settings-page__nav {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .settings-page__nav-btn {
@@ -590,7 +733,8 @@
   .settings-page__notification-grid,
   .settings-page__security-grid,
   .settings-page__summary,
-  .settings-page__account-grid {
+  .settings-page__account-grid,
+  .settings-page__session-meta {
     grid-template-columns: 1fr;
   }
 

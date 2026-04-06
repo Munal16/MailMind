@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import api from "../api/client";
+import { useConfirm } from "../context/ConfirmContext";
 import "./AdminPanel.css";
 
 const activityColors = {
@@ -50,6 +51,7 @@ function formatAdminError(err) {
 }
 
 export default function AdminPanel() {
+  const confirm = useConfirm();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -132,9 +134,18 @@ export default function AdminPanel() {
 
   const handleAdminAccess = useCallback(
     async (user, nextValue) => {
-      const actionLabel = nextValue ? "grant admin access to" : "remove admin access from";
-      const confirmed = window.confirm(`Do you want to ${actionLabel} ${user.username}?`);
-      if (!confirmed) return;
+      const action = nextValue ? "Grant admin access" : "Remove admin access";
+      const desc = nextValue
+        ? `${user.username} will gain full admin privileges inside MailMind.`
+        : `${user.username} will lose admin access and return to a standard account.`;
+      const ok = await confirm({
+        title: `${action}?`,
+        description: desc,
+        confirmLabel: action,
+        cancelLabel: "Cancel",
+        variant: nextValue ? "default" : "warning",
+      });
+      if (!ok) return;
 
       try {
         setUpdatingUserId(user.id);

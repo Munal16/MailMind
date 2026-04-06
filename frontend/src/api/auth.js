@@ -1,4 +1,13 @@
-﻿import api from "./client";
+import api from "./client";
+import {
+  getActiveSession,
+  getSessionAppRoute,
+  getStoredSessions,
+  logoutCurrentSession,
+  saveSession,
+  setActiveSession,
+  setTemporaryTokens,
+} from "./sessionStore";
 
 export async function registerUser(payload) {
   const res = await api.post("/api/users/register/", payload);
@@ -6,8 +15,7 @@ export async function registerUser(payload) {
 }
 
 export function setAuthTokens(access, refresh) {
-  localStorage.setItem("access_token", access);
-  localStorage.setItem("refresh_token", refresh);
+  setTemporaryTokens(access, refresh);
 }
 
 export async function loginUser(payload) {
@@ -26,14 +34,26 @@ export async function getMe() {
   return res.data;
 }
 
+export function finalizeSession(profile, access, refresh) {
+  return saveSession(profile, access, refresh);
+}
+
 export function getDefaultAppRoute(profile) {
-  if (profile?.is_staff || profile?.is_superuser) {
-    return "/app/admin";
-  }
-  return "/app/dashboard";
+  return getSessionAppRoute(profile);
+}
+
+export function getSignedInSessions() {
+  return getStoredSessions();
+}
+
+export function getCurrentSession() {
+  return getActiveSession();
+}
+
+export function switchMailMindSession(sessionId) {
+  return setActiveSession(sessionId);
 }
 
 export function logout() {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("refresh_token");
+  return logoutCurrentSession();
 }

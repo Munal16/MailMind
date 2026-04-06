@@ -3,6 +3,8 @@ from .gmail_oauth import gmail_auth_url, gmail_callback
 from .api import (
     gmail_status,
     gmail_disconnect,
+    gmail_disconnect_account,
+    gmail_activate_account,
     gmail_sync,
     gmail_send_message,
     gmail_save_draft,
@@ -23,6 +25,8 @@ urlpatterns = [
 
     path("status/", gmail_status),
     path("disconnect/", gmail_disconnect),
+    path("accounts/<int:credential_id>/activate/", gmail_activate_account),
+    path("accounts/<int:credential_id>/disconnect/", gmail_disconnect_account),
     path("sync/", gmail_sync),
     path("send/", gmail_send_message),
     path("drafts/save/", gmail_save_draft),

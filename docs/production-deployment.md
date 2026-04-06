@@ -49,7 +49,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-prod.ps1
 Or directly:
 
 ```powershell
-docker compose -f .\docker-compose.prod.yml up --build -d
+docker compose --env-file .\backend\.env.production -f .\docker-compose.prod.yml up --build -d
 ```
 
 ## 3. Open the app
@@ -66,7 +66,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\stop-prod.ps1
 Or directly:
 
 ```powershell
-docker compose -f .\docker-compose.prod.yml down
+docker compose --env-file .\backend\.env.production -f .\docker-compose.prod.yml down
 ```
 
 ## Notes

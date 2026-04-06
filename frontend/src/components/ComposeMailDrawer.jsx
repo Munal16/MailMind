@@ -13,6 +13,7 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import api from "../api/client";
+import { useConfirm } from "../context/ConfirmContext";
 import "./ComposeMailDrawer.css";
 
 const modeMeta = {
@@ -53,6 +54,7 @@ function formatComposeError(error) {
 }
 
 export default function ComposeMailDrawer({ open, onClose, initialData }) {
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [form, setForm] = useState(defaultForm(initialData));
@@ -109,12 +111,25 @@ export default function ComposeMailDrawer({ open, onClose, initialData }) {
     );
   }, [attachments.length, form.bcc, form.body, form.cc, form.subject, form.to]);
 
-  const closeDrawer = () => {
-    if ((sending || savingDraft) && !window.confirm("MailMind is still working on this email. Close anyway?")) {
-      return;
-    }
-    if (isDirty && !success && !window.confirm("Discard this draft?")) {
-      return;
+  const closeDrawer = async () => {
+    if (sending || savingDraft) {
+      const ok = await confirm({
+        title: "Still sending…",
+        description: "MailMind is still working on this email. Are you sure you want to close?",
+        confirmLabel: "Close anyway",
+        cancelLabel: "Wait",
+        variant: "warning",
+      });
+      if (!ok) return;
+    } else if (isDirty && !success) {
+      const ok = await confirm({
+        title: "Discard draft?",
+        description: "Your unsaved changes will be lost. This cannot be undone.",
+        confirmLabel: "Discard",
+        cancelLabel: "Keep editing",
+        variant: "danger",
+      });
+      if (!ok) return;
     }
     onClose();
   };

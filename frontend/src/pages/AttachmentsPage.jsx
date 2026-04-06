@@ -15,6 +15,7 @@ import {
 import AttachmentCard from "../components/AttachmentCard";
 import { Button } from "../components/ui/button";
 import api from "../api/client";
+import { getAccessToken } from "../api/sessionStore";
 import "./AttachmentsPage.css";
 
 const typeOptions = [
@@ -202,10 +203,12 @@ export default function AttachmentsPage() {
   }, [items, typeCounts]);
 
   const download = async (item) => {
-    const token = localStorage.getItem("access_token");
+    const token = getAccessToken();
     const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
     const url = `${baseUrl}/api/gmail/attachment/${item.gmail_id}/${item.attachment_id}/?filename=${encodeURIComponent(item.name)}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     const blob = await res.blob();
     const anchor = document.createElement("a");
     anchor.href = URL.createObjectURL(blob);

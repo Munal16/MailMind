@@ -17,7 +17,7 @@ def download_attachment(request, gmail_id, attachment_id):
         return Response({"error": "Email not found in DB. Sync first."}, status=404)
 
     try:
-        service = get_gmail_service(request.user)
+        service = get_gmail_service(request.user, credential=email.gmail_account)
     except GmailAuthError as exc:
         return Response({"error": str(exc), "requires_reconnect": True}, status=400)
 

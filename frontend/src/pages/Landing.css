@@ -328,20 +328,22 @@
 }
 
 .landing-hero__panel-pill {
+  flex-shrink: 0;
   padding: 0.42rem 0.8rem;
   border-radius: 999px;
   background: hsl(var(--success) / 0.18);
   color: hsl(var(--success));
   font-size: 0.72rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .landing-hero__mail-row {
   display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  margin-top: 0.92rem;
-  padding: 0.9rem 0.95rem;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.85rem;
   border-radius: 1rem;
   background: hsl(0 0% 100% / 0.04);
 }
@@ -349,6 +351,7 @@
 .landing-hero__mail-avatar {
   display: grid;
   place-items: center;
+  flex-shrink: 0;
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 999px;
@@ -365,7 +368,7 @@
 
 .landing-hero__mail-subject {
   color: white;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
@@ -373,26 +376,28 @@
 }
 
 .landing-hero__mail-sender {
-  margin-top: 0.2rem;
+  margin-top: 0.18rem;
   color: hsl(220 13% 78%);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
 }
 
 .landing-hero__mail-tags {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 0.35rem;
+  margin-top: 0.38rem;
 }
 
 .landing-hero__mail-tag {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.28rem 0.65rem;
+  padding: 0.22rem 0.55rem;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .landing-hero__mail-tag--high {

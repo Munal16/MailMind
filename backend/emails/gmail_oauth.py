@@ -13,9 +13,11 @@ from rest_framework.response import Response
 from google_auth_oauthlib.flow import Flow
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import GmailCredential
+from .gmail_service import set_active_gmail_credential
 from users.models import UserProfile
 
 os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
@@ -210,7 +212,23 @@ def gmail_callback(request):
             "Google did not return a refresh token. Remove MailMind from Google account permissions and connect Gmail again.",
         )
 
-    obj, _ = GmailCredential.objects.get_or_create(user_id=user_id)
+    gmail_service = build("gmail", "v1", credentials=creds)
+    profile = gmail_service.users().getProfile(userId="me").execute()
+    email_address = (profile.get("emailAddress") or "").strip().lower()
+
+    if not email_address:
+        return _redirect_callback_error(
+            state_type,
+            "Google did not return the Gmail address for this connection. Please try again.",
+        )
+
+    obj, _ = GmailCredential.objects.update_or_create(
+        user_id=user_id,
+        email_address=email_address,
+        defaults={
+            "display_name": email_address.split("@", 1)[0],
+        },
+    )
     obj.access_token = creds.token
     obj.refresh_token = creds.refresh_token
     obj.token_uri = creds.token_uri
@@ -219,5 +237,12 @@ def gmail_callback(request):
     obj.scopes = ",".join(creds.scopes or [])
     obj.expiry = _normalized_expiry(creds.expiry)
     obj.save()
+    set_active_gmail_credential(obj.user, obj)
 
-    return redirect(_build_frontend_redirect("/connect-email", gmail="connected"))
+    return redirect(
+        _build_frontend_redirect(
+            "/connect-email",
+            gmail="connected",
+            account=email_address,
+        )
+    )
