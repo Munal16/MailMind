@@ -1,6 +1,11 @@
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from django.db.models import Q
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -282,6 +287,75 @@ def delete_account(request):
 
     user.delete()
     return Response({"message": "Your MailMind account has been deleted."})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def forgot_password(request):
+    email = str(request.data.get("email") or "").strip().lower()
+    if not email:
+        return Response({"email": ["Enter your email address."]}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Always return the same message to prevent email enumeration
+    generic_response = Response({"message": "If that email is registered, a recovery link has been sent."})
+
+    try:
+        user = User.objects.get(email__iexact=email)
+    except User.DoesNotExist:
+        return generic_response
+
+    token = default_token_generator.make_token(user)
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    reset_url = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
+
+    send_mail(
+        subject="Reset your MailMind password",
+        message=(
+            f"Hi {user.username},\n\n"
+            f"Someone requested a password reset for your MailMind account.\n\n"
+            f"Click the link below to set a new password:\n\n"
+            f"{reset_url}\n\n"
+            f"This link expires in 24 hours. If you did not request this, you can safely ignore this email.\n\n"
+            f"— The MailMind team"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
+
+    return generic_response
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def reset_password(request):
+    uid = str(request.data.get("uid") or "").strip()
+    token = str(request.data.get("token") or "").strip()
+    new_password = str(request.data.get("new_password") or "").strip()
+
+    if not uid or not token:
+        return Response({"token": ["This reset link is invalid or has expired."]}, status=status.HTTP_400_BAD_REQUEST)
+    if not new_password:
+        return Response({"new_password": ["Enter a new password."]}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user_pk = urlsafe_base64_decode(uid).decode()
+        user = User.objects.get(pk=user_pk)
+    except Exception:
+        return Response({"token": ["This reset link is invalid or has expired."]}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not default_token_generator.check_token(user, token):
+        return Response({"token": ["This reset link is invalid or has expired."]}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        validate_password(new_password, user=user)
+    except Exception as exc:
+        messages = getattr(exc, "messages", None) or ["Use a stronger password."]
+        return Response({"new_password": messages}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
+    return Response({"message": "Your password has been reset. You can now sign in."})
 
 
 @api_view(["GET"])

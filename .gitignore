@@ -24,6 +24,43 @@ frontend/dist/
 frontend/.env
 frontend/.env.production
 
-# Local datasets / extracts
+# ML datasets and trained models (large files)
 clean_enron_emails_sample.csv
+intent_clean.csv
+urgency_dataset.csv
+task_dataset.csv
+mailmind_intent_distilbert/
+
+# Jupyter notebooks (local training only)
+*.ipynb
+.ipynb_checkpoints/
+
+# FYP report and documentation files
+*.docx
+*.pdf
+*.doc
+*.rtf
+CriticalAnalysis_4_4.docx
+TestingD.docx
+
+# Report generation scripts
+gen_*.py
+generate_testing_doc.py
+
+# FYP project artefact folders
+01 Project Artefact/
+Project Artefacts/
+"01 Project Artefacts - MailMind"/
+docs/final-report/
+
+# Claude AI assistant files
+.claude/
+
+# Temp and extract files
 tmp_report_extract/
+_pdf_extracts/
+*.err.log
+*.out.log
+
+# Sensitive credentials
+Client ID.docx

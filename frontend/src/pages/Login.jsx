@@ -117,7 +117,12 @@ export default function Login() {
             </div>
 
             <div className="login-page__field-group">
-              <label className="login-page__label">Password</label>
+              <div className="login-page__label-row">
+                <label className="login-page__label">Password</label>
+                <Link to="/forgot-password" className="login-page__forgot-link">
+                  Forgot password?
+                </Link>
+              </div>
               <div className="login-page__field-shell">
                 <LockKeyhole className="login-page__field-icon" />
                 <Input

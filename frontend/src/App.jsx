@@ -17,6 +17,8 @@ import ContextualSearch from "./pages/ContextualSearch";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import Settings from "./pages/Settings";
 import AdminPanel from "./pages/AdminPanel";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 export default function App() {
   return (
@@ -26,6 +28,8 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="/connect-email"
           element={

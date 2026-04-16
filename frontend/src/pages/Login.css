@@ -214,6 +214,23 @@
   line-height: 1.6;
 }
 
+.login-page__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.login-page__forgot-link {
+  color: hsl(var(--primary));
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-page__forgot-link:hover {
+  text-decoration: underline;
+}
+
 .login-page__footer-note {
   margin-top: 1.2rem;
   color: hsl(var(--muted-foreground));

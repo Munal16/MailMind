@@ -344,13 +344,28 @@ export default function Settings() {
       }));
       setMessage({ type: "success", text: "Password updated successfully." });
     } catch (err) {
-      setMessage({ type: "error", text: formatError(err, "Could not update your password.") });
+      const data = err?.response?.data;
+      const fieldError =
+        (Array.isArray(data?.current_password) ? data.current_password[0] : null) ||
+        (Array.isArray(data?.new_password) ? data.new_password[0] : null) ||
+        formatError(err, "Could not update your password.");
+      setMessage({ type: "error", text: fieldError });
     } finally {
       setSavingPassword(false);
     }
   };
 
   const deleteAccount = async () => {
+    const ok = await confirm({
+      title: "Permanently delete your account?",
+      description:
+        "This cannot be undone. All your MailMind data, connected Gmail inboxes, and settings will be removed immediately.",
+      confirmLabel: "Yes, delete my account",
+      cancelLabel: "Cancel",
+      variant: "danger",
+    });
+    if (!ok) return;
+
     try {
       setDeletingAccount(true);
       setMessage({ type: "", text: "" });
@@ -360,7 +375,12 @@ export default function Settings() {
       });
       window.location.href = "/";
     } catch (err) {
-      setMessage({ type: "error", text: formatError(err, "Could not delete your account.") });
+      const data = err?.response?.data;
+      const fieldError =
+        (Array.isArray(data?.current_password) ? data.current_password[0] : null) ||
+        (Array.isArray(data?.confirmation) ? data.confirmation[0] : null) ||
+        formatError(err, "Could not delete your account.");
+      setMessage({ type: "error", text: fieldError });
     } finally {
       setDeletingAccount(false);
     }
